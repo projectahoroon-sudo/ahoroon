@@ -12,12 +12,12 @@ export default function Cart() {
   if (cart.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-24 px-6 space-y-6">
-        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
+        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-slate-500">
           <ShoppingBag size={48} />
         </div>
         <div className="text-center">
           <h2 className="text-2xl font-bold">Your cart is empty</h2>
-          <p className="text-gray-500 mt-2">Looks like you haven't added anything yet.</p>
+          <p className="text-slate-700 mt-2">Looks like you haven't added anything yet.</p>
         </div>
         <Link to="/" className="button-primary px-8">
           Start Shopping
@@ -30,7 +30,7 @@ export default function Cart() {
     <div className="max-w-3xl mx-auto px-4 md:px-8 py-8 space-y-8 pb-24">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold font-display uppercase tracking-tight">Cart</h1>
-        <span className="text-sm font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full">{cart.length} items</span>
+        <span className="text-sm font-bold text-slate-600 bg-gray-100 px-3 py-1 rounded-full">{cart.length} items</span>
       </div>
 
       <div className="space-y-4">
@@ -53,7 +53,7 @@ export default function Cart() {
                     <h3 className="font-bold text-gray-900 line-clamp-1">{item.name}</h3>
                     <button 
                       onClick={() => removeFromCart(item.id, { size: item.selectedSize, color: item.selectedColor })}
-                      className="text-gray-300 hover:text-red-500 transition-colors"
+                      className="text-slate-500 hover:text-red-500 transition-colors"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -64,7 +64,7 @@ export default function Cart() {
                         {item.size} {item.unit || 'pcs'}
                       </p>
                     ) : (
-                      item.selectedSize && <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">Size: {item.selectedSize}</p>
+                      item.selectedSize && <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-none">Size: {item.selectedSize}</p>
                     )}
                   </div>
                 </div>
@@ -73,17 +73,17 @@ export default function Cart() {
                   <div className="flex items-center bg-gray-50 rounded-xl p-1 gap-1">
                     <button 
                       onClick={() => updateQuantity(item.id, item.cartQuantity - (item.step || 1), { size: item.selectedSize, color: item.selectedColor })}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white transition-all text-gray-500 shadow-xs"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white transition-all text-slate-700 shadow-xs"
                     >
                       <Minus size={14} />
                     </button>
                     <div className="flex items-center px-2">
                       <span className="text-sm font-bold w-6 text-center">{item.cartQuantity}</span>
-                      <span className="text-[10px] font-bold text-gray-400 ml-1 uppercase">{item.unit || 'pcs'}</span>
+                      <span className="text-[10px] font-bold text-slate-600 ml-1 uppercase">{item.unit || 'pcs'}</span>
                     </div>
                     <button 
                       onClick={() => updateQuantity(item.id, item.cartQuantity + (item.step || 1), { size: item.selectedSize, color: item.selectedColor })}
-                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white transition-all text-gray-500 shadow-xs"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white transition-all text-slate-700 shadow-xs"
                     >
                       <Plus size={14} />
                     </button>
@@ -96,13 +96,13 @@ export default function Cart() {
       </div>
 
       <div className="glass-card p-6 space-y-6">
-        <h3 className="font-bold text-xs uppercase tracking-widest text-gray-400">Order Summary</h3>
+        <h3 className="font-bold text-xs uppercase tracking-widest text-slate-600">Order Summary</h3>
         <div className="space-y-4">
-          <div className="flex justify-between text-sm text-gray-500 font-bold uppercase tracking-tight">
+          <div className="flex justify-between text-sm text-slate-700 font-bold uppercase tracking-tight">
             <span>Subtotal</span>
             <span>৳{totalPrice}</span>
           </div>
-          <div className="flex justify-between text-sm text-gray-500 font-bold uppercase tracking-tight">
+          <div className="flex justify-between text-sm text-slate-700 font-bold uppercase tracking-tight">
             <span>Shipping</span>
             <span className="text-primary">FREE</span>
           </div>

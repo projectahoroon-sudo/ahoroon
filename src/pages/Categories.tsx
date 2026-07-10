@@ -62,7 +62,7 @@ export default function Categories() {
     <div className="px-4 md:px-8 py-10 max-w-7xl mx-auto space-y-8">
       <div className="space-y-1.5">
         <h1 className="text-3xl font-black text-slate-800 font-sans tracking-tight">সব ক্যাটাগরি</h1>
-        <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">খুঁজে নিন আপনার পছন্দের খাঁটি পণ্য</p>
+        <p className="text-sm text-slate-600 font-bold uppercase tracking-widest">খুঁজে নিন আপনার পছন্দের খাঁটি পণ্য</p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -94,13 +94,13 @@ export default function Categories() {
                   <h3 className="font-bold text-slate-800 text-base md:text-lg group-hover:text-emerald-700 transition-colors line-clamp-1 leading-tight">
                     {cat.name}
                   </h3>
-                  <span className="text-[10px] md:text-xs text-slate-400 font-bold uppercase tracking-widest mt-2 block">
+                  <span className="text-[10px] md:text-xs text-slate-600 font-bold uppercase tracking-widest mt-2 block">
                     {count} {count === 1 ? 'Product' : 'Products'}
                   </span>
                 </div>
 
                 {/* Arrow hint icon - appearing elegantly inside the bottom of the card on hover */}
-                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 opacity-0 transform translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
+                <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-500 opacity-0 transform translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-300">
                   <ArrowRight size={14} />
                 </div>
               </Link>

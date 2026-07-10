@@ -17,7 +17,11 @@ import ProductListing from './pages/ProductListing';
 import Checkout from './pages/Checkout';
 import OrderTracking from './pages/OrderTracking';
 import Admin from './pages/Admin';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import RefundPolicy from './pages/RefundPolicy';
+import DeliveryPolicy from './pages/DeliveryPolicy';
 import { motion, AnimatePresence } from 'motion/react';
+
 import { Preloader } from './components/Preloader';
 
 function AppContent() {
@@ -40,6 +44,9 @@ function AppContent() {
             <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
             <Route path="/wishlist" element={<PageWrapper><Wishlist /></PageWrapper>} />
             <Route path="/admin" element={<PageWrapper><Admin /></PageWrapper>} />
+            <Route path="/privacy-policy" element={<PageWrapper><PrivacyPolicy /></PageWrapper>} />
+            <Route path="/refund-policy" element={<PageWrapper><RefundPolicy /></PageWrapper>} />
+            <Route path="/delivery-policy" element={<PageWrapper><DeliveryPolicy /></PageWrapper>} />
             <Route path="/login" element={<Navigate to="/admin" replace />} />
             <Route path="*" element={<PageWrapper><Home /></PageWrapper>} />
           </Routes>

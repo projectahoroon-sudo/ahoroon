@@ -104,9 +104,9 @@ export const Footer = () => {
           <h4 className="font-bold mb-6 text-accent-deep">Customer Support</h4>
           <ul className="space-y-4 text-sm text-gray-500">
             <li>আমাদের সম্পর্কে</li>
-            <li>ডেলিভারি পলিসি</li>
-            <li>রিফান্ড পলিসি</li>
-            <li>প্রাইভেসি পলিসি</li>
+            <li><Link to="/delivery-policy" className="hover:text-primary transition-colors">ডেলিভারি পলিসি</Link></li>
+            <li><Link to="/refund-policy" className="hover:text-primary transition-colors">রিফান্ড পলিসি</Link></li>
+            <li><Link to="/privacy-policy" className="hover:text-primary transition-colors">প্রাইভেসি পলিসি</Link></li>
           </ul>
         </div>
 

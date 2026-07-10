@@ -27,6 +27,7 @@ import { Product, Category, SliderImage, Producer, PressCoverage } from '../type
 import { CategoryIcon } from '../components/CategoryIcon';
 import { RecommendedProducts } from '../components/RecommendedProducts';
 import { AharonVideoSection } from '../components/AharonVideoSection';
+import { PremiumCategoryCard } from '../components/PremiumCategoryCard';
 
 const FALLBACK_PRODUCERS: Producer[] = [];
 
@@ -555,43 +556,27 @@ export default function Home() {
         ))}
       </section>
 
-      {/* Featured Categories Carousel Grid */}
-      <section className="px-4 md:px-8 max-w-7xl mx-auto space-y-10">
-        <div className="flex items-end justify-between border-b-2 border-slate-100 pb-6">
+      {/* Featured Categories Premium Grid */}
+      <section className="relative px-4 md:px-8 max-w-7xl mx-auto space-y-12 py-16">
+        {/* Decorative Background Elements */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-100/40 rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-50/60 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="relative z-10 flex items-end justify-between border-b-2 border-slate-100 pb-6">
           <div className="space-y-1">
             <h2 className="text-2xl md:text-4xl font-display font-black text-slate-900">ঐতিহ্যবাহী স্বাদের সমাহার</h2>
-            <p className="text-slate-400 font-serif italic text-xs md:text-sm">The soul of legendary Bengal in every single jar...</p>
+            <p className="text-slate-600 font-serif italic text-xs md:text-sm">The soul of legendary Bengal in every single jar...</p>
           </div>
-          <Link to="/categories" className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs uppercase tracking-widest font-bold px-5 py-3 rounded-xl border border-slate-200/50 transition-colors">
+          <Link to="/categories" className="bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs uppercase tracking-widest font-bold px-5 py-3 rounded-xl border border-slate-200/50 transition-colors">
             সব ক্যাটাগরি
           </Link>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+        <div className="relative z-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           {categories.slice(0, 5).map((cat, idx) => (
-            <motion.div
-              key={`home-cat-${cat.id || 'cat'}-${idx}`}
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              whileHover={{ y: -4 }}
-              transition={{ duration: 0.3, delay: idx * 0.05 }}
-              className="shrink-0"
-            >
-              <Link
-                to={`/category/${cat.id}`}
-                className="flex flex-col items-center gap-3.5 group"
-              >
-                <div className="w-24 h-24 rounded-full flex items-center justify-center transition-all duration-700 bg-white border border-slate-100 group-hover:bg-emerald-500 group-hover:border-emerald-500 group-hover:shadow-xl group-hover:shadow-emerald-500/20 group-hover:-translate-y-1">
-                  <div className="text-emerald-600 group-hover:text-white transition-all duration-300 transform group-hover:scale-105">
-                    <CategoryIcon name={cat.icon} size={36} strokeWidth={1.5} />
-                  </div>
-                </div>
-                <span className="text-xs font-black uppercase tracking-widest text-black transition-colors text-center font-mono">
-                  {cat.name}
-                </span>
-              </Link>
-            </motion.div>
+            <PremiumCategoryCard key={`home-cat-${cat.id || 'cat'}-${idx}`} category={cat} index={idx} />
           ))}
         </div>
       </section>

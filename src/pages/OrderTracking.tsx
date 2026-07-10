@@ -53,7 +53,7 @@ export default function OrderTracking() {
   }, [orderId]);
 
   if (loading) return <div className="p-8 text-center">Loading order...</div>;
-  if (!order) return <div className="p-8 text-center uppercase font-bold text-gray-400">Order not found</div>;
+  if (!order) return <div className="p-8 text-center uppercase font-bold text-slate-600">Order not found</div>;
 
   const currentStepIndex = STATUS_STEPS.findIndex(s => s.id === order.status);
 
@@ -61,12 +61,12 @@ export default function OrderTracking() {
     <div className="min-h-screen bg-surface pb-24 md:pb-8">
       <div className="max-w-4xl mx-auto px-4 py-6">
         <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-          <Link to="/" className="inline-flex items-center gap-2 text-gray-500 hover:text-primary transition-colors text-sm font-bold">
+          <Link to="/" className="inline-flex items-center gap-2 text-slate-700 hover:text-primary transition-colors text-sm font-bold">
             <ChevronLeft size={16} />
             Back to Home
           </Link>
           {auth.currentUser && (
-            <Link to="/profile" className="inline-flex items-center gap-2 text-gray-500 hover:text-primary transition-colors text-sm font-bold">
+            <Link to="/profile" className="inline-flex items-center gap-2 text-slate-700 hover:text-primary transition-colors text-sm font-bold">
               View Profile / Orders
             </Link>
           )}
@@ -78,7 +78,7 @@ export default function OrderTracking() {
             <div className="glass-card p-6 space-y-6 overflow-hidden">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tracking ID</p>
+                  <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1">Tracking ID</p>
                   <h1 className="text-xl font-bold font-display text-gray-900">#{orderId?.slice(-8).toUpperCase()}</h1>
                 </div>
                 <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold uppercase">
