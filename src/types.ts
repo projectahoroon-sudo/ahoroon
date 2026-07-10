@@ -50,13 +50,27 @@ export interface Order {
   createdAt: any;
 }
 
+export type Role = 'Super Admin' | 'Admin' | 'Manager' | 'Staff';
+
+export interface Permissions {
+  dashboard: { view: boolean };
+  products: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+  categories: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+  orders: { view: boolean; update: boolean; cancel: boolean; delete: boolean };
+  users: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+  heroSlider: { view: boolean; create: boolean; edit: boolean; delete: boolean };
+  sales: { view: boolean; export: boolean };
+  settings: { view: boolean; update: boolean };
+  reports: { view: boolean; export: boolean };
+}
+
 export interface AppUser {
   id: string;
   name?: string;
   email: string;
   password?: string;
-  role: 'admin' | 'editor' | 'viewer';
-  permissions: string[];
+  role: Role;
+  permissions: Permissions;
   createdAt: any;
 }
 
