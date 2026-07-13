@@ -47,6 +47,7 @@ export function AdminProducers() {
   const [editingProducer, setEditingProducer] = useState<Producer | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [canModify, setCanModify] = useState(true);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -54,6 +55,24 @@ export function AdminProducers() {
     img: '',
     story: ''
   });
+
+  useEffect(() => {
+    // Determine edit permission based on custom user role
+    const customUserStr = localStorage.getItem('customAdminUser');
+    if (customUserStr) {
+      try {
+        const customUser = JSON.parse(customUserStr);
+        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.role === 'super_admin') {
+          setCanModify(true);
+        } else if (customUser.isCustom) {
+          const role = customUser.role;
+          setCanModify(role === 'admin' || role === 'editor');
+        }
+      } catch (e) {
+        console.error('Error parsing custom user role:', e);
+      }
+    }
+  }, []);
 
   const showStatus = (type: 'success' | 'error', text: string) => {
     setStatusMsg({ type, text });
@@ -198,16 +217,18 @@ export function AdminProducers() {
           <h2 className="text-xl font-display font-black text-accent-deep">Manage Producers (উদ্যোক্তা ও কারিগর)</h2>
           <p className="text-gray-500 text-xs mt-1">Configure and manage biographies of deep-country producers displayed in Home screen Section 3.</p>
         </div>
-        <button 
-          onClick={() => {
-            setEditingProducer(null);
-            setFormData({ name: '', role: '', img: '', story: '' });
-            setIsModalOpen(true);
-          }}
-          className="bg-primary text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-accent-deep transition-all shadow-lg shadow-primary/20"
-        >
-          <Plus size={16} /> Add Producer
-        </button>
+        {canModify && (
+          <button 
+            onClick={() => {
+              setEditingProducer(null);
+              setFormData({ name: '', role: '', img: '', story: '' });
+              setIsModalOpen(true);
+            }}
+            className="bg-primary text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-accent-deep transition-all shadow-lg shadow-primary/20"
+          >
+            <Plus size={16} /> Add Producer
+          </button>
+        )}
       </div>
 
       {statusMsg && (
@@ -242,48 +263,50 @@ export function AdminProducers() {
               </div>
 
               {/* Action layout controls overlay */}
-              <div className="absolute top-4 right-4 z-10 flex gap-1 bg-black/70 backdrop-blur-md p-1 rounded-xl border border-white/10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md">
-                <button 
-                  onClick={() => handleMove(index, 'up')}
-                  disabled={index === 0}
-                  className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
-                  title="Move sequence left"
-                >
-                  <ArrowUp size={16} />
-                </button>
-                <button 
-                  onClick={() => handleMove(index, 'down')}
-                  disabled={index === producers.length - 1}
-                  className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
-                  title="Move sequence right"
-                >
-                  <ArrowDown size={16} />
-                </button>
-                <div className="w-[1px] bg-white/10 my-1 mx-1" />
-                <button 
-                  onClick={() => {
-                    setEditingProducer(producer);
-                    setFormData({
-                      name: producer.name,
-                      role: producer.role,
-                      img: producer.img,
-                      story: producer.story
-                    });
-                    setIsModalOpen(true);
-                  }}
-                  className="p-1.5 text-white hover:text-primary transition-colors"
-                  title="Edit details"
-                >
-                  <Edit size={16} />
-                </button>
-                <button 
-                  onClick={() => handleDelete(producer.id)}
-                  className="p-1.5 text-red-400 hover:text-red-500 transition-colors"
-                  title="Delete producer card"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+              {canModify && (
+                <div className="absolute top-4 right-4 z-10 flex gap-1 bg-black/70 backdrop-blur-md p-1 rounded-xl border border-white/10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md">
+                  <button 
+                    onClick={() => handleMove(index, 'up')}
+                    disabled={index === 0}
+                    className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
+                    title="Move sequence left"
+                  >
+                    <ArrowUp size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleMove(index, 'down')}
+                    disabled={index === producers.length - 1}
+                    className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
+                    title="Move sequence right"
+                  >
+                    <ArrowDown size={16} />
+                  </button>
+                  <div className="w-[1px] bg-white/10 my-1 mx-1" />
+                  <button 
+                    onClick={() => {
+                      setEditingProducer(producer);
+                      setFormData({
+                        name: producer.name,
+                        role: producer.role,
+                        img: producer.img,
+                        story: producer.story
+                      });
+                      setIsModalOpen(true);
+                    }}
+                    className="p-1.5 text-white hover:text-primary transition-colors"
+                    title="Edit details"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(producer.id)}
+                    className="p-1.5 text-red-400 hover:text-red-500 transition-colors"
+                    title="Delete producer card"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )}
 
               {/* Cover Graphic Card Area */}
               <div className="aspect-[4/3] w-full bg-slate-50 relative overflow-hidden border-b border-gray-100">

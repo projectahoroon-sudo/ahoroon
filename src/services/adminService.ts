@@ -61,7 +61,7 @@ function checkFirestoreDisabled() {
 export const adminService = {
   async isAdmin() {
     if (!auth.currentUser) return false;
-    if (auth.currentUser.email === 'reocleanproperties@gmail.com') return true;
+    if (auth.currentUser.email === 'reocleanproperties@gmail.com' || auth.currentUser.email === 'ahorooon@gmail.com') return true;
     
     try {
       const adminDoc = await getDoc(doc(db, 'admins', auth.currentUser.uid));

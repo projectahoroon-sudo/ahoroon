@@ -54,6 +54,7 @@ export function AdminPress() {
   const [editingPress, setEditingPress] = useState<PressCoverage | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [canModify, setCanModify] = useState(true);
   
   const [formData, setFormData] = useState({
     source: '',
@@ -63,6 +64,24 @@ export function AdminPress() {
     link: '',
     date: ''
   });
+
+  useEffect(() => {
+    // Determine edit permission based on custom user role
+    const customUserStr = localStorage.getItem('customAdminUser');
+    if (customUserStr) {
+      try {
+        const customUser = JSON.parse(customUserStr);
+        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.role === 'super_admin') {
+          setCanModify(true);
+        } else if (customUser.isCustom) {
+          const role = customUser.role;
+          setCanModify(role === 'admin' || role === 'editor');
+        }
+      } catch (e) {
+        console.error('Error parsing custom user role:', e);
+      }
+    }
+  }, []);
 
   const showStatus = (type: 'success' | 'error', text: string) => {
     setStatusMsg({ type, text });
@@ -210,16 +229,18 @@ export function AdminPress() {
           <h2 className="text-xl font-display font-black text-accent-deep">Manage News Coverage (কোলাজ ও মিডিয়া কাভারেজ)</h2>
           <p className="text-gray-500 text-xs mt-1">Configure and manage press clippings, online newspaper coverage and television story notes shown on Home screen.</p>
         </div>
-        <button 
-          onClick={() => {
-            setEditingPress(null);
-            setFormData({ source: '', title: '', excerpt: '', img: '', link: '', date: '' });
-            setIsModalOpen(true);
-          }}
-          className="bg-primary text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-accent-deep transition-all shadow-lg shadow-primary/20"
-        >
-          <Plus size={16} /> Add News Clip
-        </button>
+        {canModify && (
+          <button 
+            onClick={() => {
+              setEditingPress(null);
+              setFormData({ source: '', title: '', excerpt: '', img: '', link: '', date: '' });
+              setIsModalOpen(true);
+            }}
+            className="bg-primary text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-accent-deep transition-all shadow-lg shadow-primary/20"
+          >
+            <Plus size={16} /> Add News Clip
+          </button>
+        )}
       </div>
 
       {statusMsg && (
@@ -254,50 +275,52 @@ export function AdminPress() {
               </div>
 
               {/* Action layout controls overlay */}
-              <div className="absolute top-4 right-4 z-10 flex gap-1 bg-black/70 backdrop-blur-md p-1 rounded-xl border border-white/10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md">
-                <button 
-                  onClick={() => handleMove(index, 'up')}
-                  disabled={index === 0}
-                  className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
-                  title="Move sequence left"
-                >
-                  <ArrowUp size={16} />
-                </button>
-                <button 
-                  onClick={() => handleMove(index, 'down')}
-                  disabled={index === pressList.length - 1}
-                  className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
-                  title="Move sequence right"
-                >
-                  <ArrowDown size={16} />
-                </button>
-                <div className="w-[1px] bg-white/10 my-1 mx-1" />
-                <button 
-                  onClick={() => {
-                    setEditingPress(press);
-                    setFormData({
-                      source: press.source,
-                      title: press.title,
-                      excerpt: press.excerpt,
-                      img: press.img,
-                      link: press.link,
-                      date: press.date
-                    });
-                    setIsModalOpen(true);
-                  }}
-                  className="p-1.5 text-white hover:text-primary transition-colors"
-                  title="Edit details"
-                >
-                  <Edit size={16} />
-                </button>
-                <button 
-                  onClick={() => handleDelete(press.id)}
-                  className="p-1.5 text-red-400 hover:text-red-500 transition-colors"
-                  title="Delete newspaper clipping"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+              {canModify && (
+                <div className="absolute top-4 right-4 z-10 flex gap-1 bg-black/70 backdrop-blur-md p-1 rounded-xl border border-white/10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md">
+                  <button 
+                    onClick={() => handleMove(index, 'up')}
+                    disabled={index === 0}
+                    className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
+                    title="Move sequence left"
+                  >
+                    <ArrowUp size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleMove(index, 'down')}
+                    disabled={index === pressList.length - 1}
+                    className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
+                    title="Move sequence right"
+                  >
+                    <ArrowDown size={16} />
+                  </button>
+                  <div className="w-[1px] bg-white/10 my-1 mx-1" />
+                  <button 
+                    onClick={() => {
+                      setEditingPress(press);
+                      setFormData({
+                        source: press.source,
+                        title: press.title,
+                        excerpt: press.excerpt,
+                        img: press.img,
+                        link: press.link,
+                        date: press.date
+                      });
+                      setIsModalOpen(true);
+                    }}
+                    className="p-1.5 text-white hover:text-primary transition-colors"
+                    title="Edit details"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(press.id)}
+                    className="p-1.5 text-red-400 hover:text-red-500 transition-colors"
+                    title="Delete newspaper clipping"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )}
 
               {/* Cover Graphic Card Area */}
               <div className="aspect-[16/10] w-full bg-slate-50 relative overflow-hidden border-b border-gray-100">

@@ -33,7 +33,8 @@ import {
   ReceiptText,
   User,
   Phone,
-  MapPin
+  MapPin,
+  FileSpreadsheet
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -47,6 +48,8 @@ import { AdminSliders } from '../components/AdminSliders';
 import { AdminProducers } from '../components/AdminProducers';
 import { AdminPress } from '../components/AdminPress';
 import AdminSettings from '../components/AdminSettings';
+import AdminSalesReport from '../components/AdminSalesReport';
+import { BatchUploadModal } from '../components/BatchUploadModal';
 
 type Tab = 'dashboard' | 'sliders' | 'products' | 'orders' | 'categories' | 'users' | 'invoices' | 'producers' | 'press' | 'settings';
 
@@ -68,6 +71,7 @@ export default function Admin() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isManualInvoiceModalOpen, setIsManualInvoiceModalOpen] = useState(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Partial<Product> | null>(null);
   const [editingCategory, setEditingCategory] = useState<Partial<Category> | null>(null);
   const [editingUser, setEditingUser] = useState<Partial<AppUser> | null>(null);
@@ -454,7 +458,7 @@ export default function Admin() {
                 />
                 <SidebarItem 
                   icon={ReceiptText} 
-                  label="Sales"
+                  label="Sales Reports"
                   active={activeTab === 'invoices'} 
                   onClick={() => { setActiveTab('invoices'); setIsMobileSidebarOpen(false); }} 
                   showLabel
@@ -598,61 +602,62 @@ export default function Admin() {
 
       {/* Main Content Pane */}
       <main className="flex-1 overflow-y-auto p-4 md:p-10 min-w-0">
-        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
-          <div>
-            <h1 className="text-3xl font-display font-black text-accent-deep capitalize">
-              {activeTab === 'invoices' ? 'All Sales' : activeTab}
-            </h1>
-            <p className="text-gray-500 text-sm">Welcome back, Admin</p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 md:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search..." 
-                className="w-full pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-100 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
-              />
+        {activeTab !== 'invoices' && (
+          <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+            <div>
+              <h1 className="text-3xl font-display font-black text-accent-deep capitalize">
+                {activeTab}
+              </h1>
+              <p className="text-gray-500 text-sm">Welcome back, Admin</p>
             </div>
-            {activeTab === 'products' && (
-              <button 
-                onClick={() => {
-                  setEditingProduct({});
-                  setIsModalOpen(true);
-                }}
-                className="bg-primary text-white p-2 sm:px-4 sm:py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 group"
-              >
-                <Plus size={20} />
-                <span className="hidden sm:block">Add Product</span>
-              </button>
-            )}
-            {activeTab === 'users' && (
-              <button 
-                onClick={() => {
-                  setEditingUser({});
-                  setIsUserModalOpen(true);
-                }}
-                className="bg-primary text-white p-2 sm:px-4 sm:py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 group"
-              >
-                <Plus size={20} />
-                <span className="hidden sm:block">Add User</span>
-              </button>
-            )}
-            {activeTab === 'invoices' && (
-              <button 
-                onClick={() => {
-                  setEditingManualInvoice({});
-                  setIsManualInvoiceModalOpen(true);
-                }}
-                className="bg-primary text-white p-2 sm:px-4 sm:py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 group"
-              >
-                <Plus size={20} />
-                <span className="hidden sm:block">Add New Sale</span>
-              </button>
-            )}
-          </div>
-        </header>
+            
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 md:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input 
+                  type="text" 
+                  placeholder="Search..." 
+                  className="w-full pl-10 pr-4 py-2 bg-white rounded-xl border border-gray-100 focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                />
+              </div>
+              {activeTab === 'products' && (
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => {
+                      setIsBatchModalOpen(true);
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer animate-pulse hover:animate-none"
+                  >
+                    <FileSpreadsheet size={18} />
+                    <span className="hidden sm:block text-sm">Batch Upload</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setEditingProduct({});
+                      setIsModalOpen(true);
+                    }}
+                    className="bg-primary text-white p-2 sm:px-4 sm:py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 cursor-pointer"
+                  >
+                    <Plus size={20} />
+                    <span className="hidden sm:block">Add Product</span>
+                  </button>
+                </div>
+              )}
+              {activeTab === 'users' && (
+                <button 
+                  onClick={() => {
+                    setEditingUser({});
+                    setIsUserModalOpen(true);
+                  }}
+                  className="bg-primary text-white p-2 sm:px-4 sm:py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-primary/20 group"
+                >
+                  <Plus size={20} />
+                  <span className="hidden sm:block">Add User</span>
+                </button>
+              )}
+            </div>
+          </header>
+        )}
 
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
@@ -789,28 +794,28 @@ export default function Admin() {
         )}
 
         {activeTab === 'invoices' && (
-          <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-            <InvoicesTable 
-              invoices={manualInvoices} 
-              onView={(inv: any) => {
-                setViewingInvoice(inv);
-                setIsManualInvoicePrintOpen(true);
-              }}
-              onDelete={(id: string) => {
-                const inv = manualInvoices.find(i => i.id === id);
-                setDeleteConfirm({
-                  id,
-                  type: 'invoice',
-                  title: 'Delete Sale',
-                  message: `Are you sure you want to permanently delete custom sale #${inv?.invoiceNo || inv?.invoiceNumber || ''}?`
-                });
-              }}
-            />
-          </div>
+          <AdminSalesReport 
+            orders={orders}
+            manualInvoices={manualInvoices}
+            products={products}
+            categories={categories}
+            onRefresh={loadData}
+            onAddManualSale={() => {
+              setEditingManualInvoice({});
+              setIsManualInvoiceModalOpen(true);
+            }}
+          />
         )}
       </main>
 
       <AnimatePresence>
+        {isBatchModalOpen && (
+          <BatchUploadModal 
+            onClose={() => setIsBatchModalOpen(false)} 
+            onSave={loadData} 
+            categories={categories}
+          />
+        )}
         {isModalOpen && (
           <ProductModal 
             product={editingProduct} 
@@ -1905,7 +1910,8 @@ function ProductModal({ product, onClose, onSave, categories }: any) {
     size: product?.size || 1,
     moq: product?.moq || 1,
     step: product?.step || 1,
-    stock: product?.stock !== undefined ? product.stock : 100
+    stock: product?.stock !== undefined ? product.stock : 100,
+    costPrice: product?.costPrice || 0
   });
   const [loading, setLoading] = useState(false);
   const [generatingAi, setGeneratingAi] = useState(false);
@@ -2035,8 +2041,8 @@ function ProductModal({ product, onClose, onSave, categories }: any) {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-2 md:col-span-1">
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Name</label>
               <input 
                 required
@@ -2046,13 +2052,23 @@ function ProductModal({ product, onClose, onSave, categories }: any) {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Price (৳)</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Selling Price (৳)</label>
               <input 
                 required
                 type="number"
                 className="w-full bg-surface p-4 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                 value={formData.price}
                 onChange={e => setFormData({...formData, price: Number(e.target.value)})}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Cost Price (৳) (ক্রয়মূল্য)</label>
+              <input 
+                required
+                type="number"
+                className="w-full bg-surface p-4 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                value={formData.costPrice}
+                onChange={e => setFormData({...formData, costPrice: Number(e.target.value)})}
               />
             </div>
           </div>

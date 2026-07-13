@@ -44,6 +44,7 @@ export default function Home() {
   const [press, setPress] = useState<PressCoverage[]>(FALLBACK_PRESS);
   const [loading, setLoading] = useState(false);
   const [selectedPress, setSelectedPress] = useState<PressCoverage | null>(null);
+  const [selectedProducer, setSelectedProducer] = useState<Producer | null>(null);
   
   // Carousel States
   const [activeSlide, setActiveSlide] = useState(0);
@@ -351,7 +352,8 @@ export default function Home() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: idx * 0.1 }}
-              className="group relative h-[380px] rounded-[2.5rem] overflow-hidden shadow-lg border border-slate-100"
+              onClick={() => setSelectedProducer(producer)}
+              className="group relative h-[380px] rounded-[2.5rem] overflow-hidden shadow-lg border border-slate-100 cursor-pointer hover:shadow-2xl hover:border-amber-500/30 transition-all duration-300"
             >
               <img 
                 src={producer.img} 
@@ -365,6 +367,10 @@ export default function Home() {
                 <p className="text-white/80 text-xs leading-relaxed transition-opacity duration-500 line-clamp-3">
                   {producer.story}
                 </p>
+                <span className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-bold text-amber-400 group-hover:text-amber-300 transition-colors self-start">
+                  <span>সম্পূর্ণ গল্প পড়ুন</span>
+                  <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                </span>
               </div>
             </motion.div>
           ))}
@@ -580,6 +586,87 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* Producer Story Modal */}
+      <AnimatePresence>
+        {selectedProducer && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md shadow-[0_0_50px_rgba(0,0,0,0.3)]"
+            onClick={() => setSelectedProducer(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-gradient-to-b from-white to-slate-50/50 rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col relative border border-slate-100"
+            >
+              <button
+                onClick={() => setSelectedProducer(null)}
+                className="absolute top-5 right-5 z-20 w-10 h-10 flex items-center justify-center bg-white/90 backdrop-blur-md text-slate-800 rounded-full hover:bg-slate-200 hover:scale-105 transition-all shadow-md border border-slate-100 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="overflow-y-auto">
+                <div className="flex flex-col md:flex-row min-h-[450px]">
+                  {/* Left Side: Stunning Producer Image Panel */}
+                  <div className="md:w-5/12 bg-slate-100 relative min-h-[300px] md:min-h-auto flex items-stretch">
+                    <img 
+                      src={selectedProducer.img} 
+                      alt={selectedProducer.name} 
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" />
+                    <div className="absolute bottom-6 left-6 right-6 z-10 text-white">
+                      <span className="bg-amber-400 text-slate-950 font-black text-[10px] tracking-wider uppercase px-3.5 py-1.5 rounded-full shadow-lg border border-amber-300">
+                        {selectedProducer.role}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Side: Elegant Biography & Info */}
+                  <div className="md:w-7/12 p-8 md:p-12 flex flex-col justify-between space-y-8">
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-wider">
+                          <Users size={14} className="text-amber-500 animate-pulse" />
+                          <span>আহরোণ কারিগর ও উদ্যোক্তা প্রোফাইল</span>
+                        </div>
+                        <h2 className="text-3xl md:text-4xl font-display font-black text-slate-900 tracking-tight leading-tight">
+                          {selectedProducer.name}
+                        </h2>
+                      </div>
+
+                      {/* Decorative Divider */}
+                      <div className="w-16 h-1 bg-gradient-to-r from-amber-400 to-emerald-500 rounded-full" />
+
+                      {/* Story Text content styled for high-readability */}
+                      <div className="prose prose-slate prose-emerald font-serif text-slate-700 leading-relaxed text-base md:text-lg max-w-none">
+                        {selectedProducer.story.split('\n').map((paragraph, i) => (
+                          <p key={i} className="mb-4 font-normal tracking-wide drop-shadow-[0_0.5px_0.5px_rgba(255,255,255,0.8)]">
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Aesthetic signature footer */}
+                    <div className="pt-6 border-t border-slate-100 flex items-center justify-between text-slate-400 text-xs font-mono font-medium">
+                      <span>ঐতিহ্যবাহী ও নিরাপদ পণ্যের স্বপ্ন</span>
+                      <span className="text-[#005900] font-bold font-sans">#আহরোণ_উদ্যোগ</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Press Coverage Modal */}
       <AnimatePresence>

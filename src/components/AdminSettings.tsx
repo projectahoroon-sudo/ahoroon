@@ -7,13 +7,28 @@ export default function AdminSettings() {
   const [logoUrl, setLogoUrl] = useState('');
   const [footerLogoUrl, setFooterLogoUrl] = useState('');
   const [loading, setLoading] = useState(false);
-// ... inside the AdminSettings component
-
   const [saving, setSaving] = useState(false);
   const [seeding, setSeeding] = useState(false);
+  const [canModify, setCanModify] = useState(true);
 
   useEffect(() => {
     loadSettings();
+    
+    // Determine edit permission based on custom user role
+    const customUserStr = localStorage.getItem('customAdminUser');
+    if (customUserStr) {
+      try {
+        const customUser = JSON.parse(customUserStr);
+        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.role === 'super_admin') {
+          setCanModify(true);
+        } else if (customUser.isCustom) {
+          const role = customUser.role;
+          setCanModify(role === 'admin'); // Only super_admin and admin can modify settings, not editors or staff
+        }
+      } catch (e) {
+        console.error('Error parsing custom user role:', e);
+      }
+    }
   }, []);
 
   const loadSettings = async () => {
@@ -86,18 +101,20 @@ export default function AdminSettings() {
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Site Settings</h1>
           <p className="text-sm text-gray-500">Manage your website's general configuration.</p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 bg-primary hover:bg-accent-deep text-white px-5 py-2.5 rounded-xl transition-all font-medium disabled:opacity-50"
-        >
-          {saving ? (
-            <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
-          ) : (
-            <Save size={20} />
-          )}
-          Save Changes
-        </button>
+        {canModify && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 bg-primary hover:bg-accent-deep text-white px-5 py-2.5 rounded-xl transition-all font-medium disabled:opacity-50"
+          >
+            {saving ? (
+              <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
+            ) : (
+              <Save size={20} />
+            )}
+            Save Changes
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-[2.5rem] p-6 sm:p-8 border border-gray-100 shadow-sm overflow-hidden">
@@ -213,110 +230,112 @@ export default function AdminSettings() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between bg-green-50 p-6 rounded-2xl border border-green-100 mt-6">
-              <div>
-                <p className="font-bold text-green-900">Seed Categories</p>
-                <p className="text-sm text-green-700/80 mt-1">
-                  Adds new categories to the database.
-                </p>
-              </div>
-              <button
-                onClick={async () => {
-                  const categories = [
-                    { name: 'নিরাপদ প্রাকৃতিক সার', icon: 'Leaf' },
-                    { name: 'নিরাপদ আবাদের চাল', icon: 'Wheat' },
-                    { name: 'নিরাপদ আবাদের দেশি ডাল ও বিচি', icon: 'Bean' },
-                    { name: 'নিরাপদ আবাদের দেশি মশলা', icon: 'Flame' },
-                    { name: 'নিরাপদ ভোজ্য তেল', icon: 'Droplets' },
-                    { name: 'নিরাপদ আবাদের পাহাড়ি ফল এবং সবজী', icon: 'Apple' },
-                    { name: 'ময়দা ও ছাতু আইটেম', icon: 'Wheat' },
-                    { name: 'দুগ্ধজাত পন্য', icon: 'Milk' },
-                    { name: 'প্রাকৃতিক মিষ্টি', icon: 'Candy' },
-                    { name: 'প্রাকৃতিক নির্যাস', icon: 'FlaskConical' },
-                    { name: 'আদরের শিশুদের খাদ্য', icon: 'Baby' },
-                    { name: 'প্রাকৃতিক গুল্মলতার পুনর্জীবনদায়ী প্রাচীন প্রতিকার', icon: 'Sprout' },
-                    { name: 'নিরাপদ ড্রাই ফিশ', icon: 'Fish' },
-                    { name: 'নিরাপদ তরতাজা আমিষ', icon: 'Drumstick' },
-                    { name: 'অন্যান্য', icon: 'MoreHorizontal' },
-                  ];
-                  setSeeding(true);
-                  try {
-                    for (const cat of categories) {
-                      await adminService.addCategory({ 
-                        name: cat.name,
-                        icon: cat.icon
-                      });
-                    }
-                    alert('Categories added successfully!');
-                  } catch (err) {
-                    console.error(err);
-                    alert('Failed to add categories');
-                  } finally {
-                    setSeeding(false);
-                  }
-                }}
-                disabled={seeding}
-                className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors shrink-0 shadow-lg shadow-green-200"
-              >
-                {seeding ? 'Adding...' : 'Add Categories'}
-              </button>
-            </div>
-
-
-
-            <div className="flex items-center justify-between bg-red-50 p-6 rounded-2xl border border-red-100">
-              <div>
-                <p className="font-bold text-red-900">Wipe Categories Only</p>
-                <p className="text-sm text-red-700/80 mt-1">
-                  WARNING: This will permanently delete ALL categories.
-                </p>
-              </div>
-              <button
-                onClick={async () => {
-                  if (window.confirm("Are you sure you want to wipe all categories?")) {
-                    setSeeding(true);
-                    const success = await adminService.wipeCategories();
-                    setSeeding(false);
-                    if (success) {
-                      alert('Categories wiped successfully.');
-                    } else {
-                      alert('Failed to wipe categories.');
-                    }
-                  }
-                }}
-                disabled={seeding}
-                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shrink-0 shadow-lg shadow-red-200"
-              >
-                Wipe Categories
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between bg-red-50 p-6 rounded-2xl border border-red-100">
-              <div>
-                <p className="font-bold text-red-900">Wipe Full Database</p>
-                <p className="text-sm text-red-700/80 mt-1">
-                  WARNING: This will permanently delete ALL data (Products, Categories, Sliders, Producers, Press, etc). This cannot be undone.
-                </p>
-              </div>
-              <button
-                onClick={async () => {
-                  if (window.confirm("Are you ABSOLUTELY sure you want to completely erase the database? All your uploaded products will be gone.")) {
-                    if (window.confirm("Double checking: DELETE EVERYTHING?")) {
-                      const success = await adminService.factoryReset();
-                      if (success) {
-                        alert('Database wiped completely. The website is now clean.');
-                        window.location.reload();
-                      } else {
-                        alert('Failed to drop the database. See console for details.');
+            {canModify && (
+              <>
+                <div className="flex items-center justify-between bg-green-50 p-6 rounded-2xl border border-green-100 mt-6">
+                  <div>
+                    <p className="font-bold text-green-900">Seed Categories</p>
+                    <p className="text-sm text-green-700/80 mt-1">
+                      Adds new categories to the database.
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const categories = [
+                        { name: 'নিরাপদ প্রাকৃতিক সার', icon: 'Leaf' },
+                        { name: 'নিরাপদ আবাদের চাল', icon: 'Wheat' },
+                        { name: 'নিরাপদ আবাদের দেশি ডাল ও বিচি', icon: 'Bean' },
+                        { name: 'নিরাপদ আবাদের দেশি মশলা', icon: 'Flame' },
+                        { name: 'নিরাপদ ভোজ্য তেল', icon: 'Droplets' },
+                        { name: 'নিরাপদ আবাদের পাহাড়ি ফল এবং সবজী', icon: 'Apple' },
+                        { name: 'ময়দা ও ছাতু আইটেম', icon: 'Wheat' },
+                        { name: 'দুগ্ধজাত পন্য', icon: 'Milk' },
+                        { name: 'প্রাকৃতিক মিষ্টি', icon: 'Candy' },
+                        { name: 'প্রাকৃতিক নির্যাস', icon: 'FlaskConical' },
+                        { name: 'আদরের শিশুদের খাদ্য', icon: 'Baby' },
+                        { name: 'প্রাকৃতিক গুল্মলতার পুনর্জীবনদায়ী প্রাচীন প্রতিকার', icon: 'Sprout' },
+                        { name: 'নিরাপদ ড্রাই ফিশ', icon: 'Fish' },
+                        { name: 'নিরাপদ তরতাজা আমিষ', icon: 'Drumstick' },
+                        { name: 'অন্যান্য', icon: 'MoreHorizontal' },
+                      ];
+                      setSeeding(true);
+                      try {
+                        for (const cat of categories) {
+                          await adminService.addCategory({ 
+                            name: cat.name,
+                            icon: cat.icon
+                          });
+                        }
+                        alert('Categories added successfully!');
+                      } catch (err) {
+                        console.error(err);
+                        alert('Failed to add categories');
+                      } finally {
+                        setSeeding(false);
                       }
-                    }
-                  }
-                }}
-                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shrink-0 shadow-lg shadow-red-200"
-              >
-                Factory Reset
-              </button>
-            </div>
+                    }}
+                    disabled={seeding}
+                    className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors shrink-0 shadow-lg shadow-green-200"
+                  >
+                    {seeding ? 'Adding...' : 'Add Categories'}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between bg-red-50 p-6 rounded-2xl border border-red-100">
+                  <div>
+                    <p className="font-bold text-red-900">Wipe Categories Only</p>
+                    <p className="text-sm text-red-700/80 mt-1">
+                      WARNING: This will permanently delete ALL categories.
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (window.confirm("Are you sure you want to wipe all categories?")) {
+                        setSeeding(true);
+                        const success = await adminService.wipeCategories();
+                        setSeeding(false);
+                        if (success) {
+                          alert('Categories wiped successfully.');
+                        } else {
+                          alert('Failed to wipe categories.');
+                        }
+                      }
+                    }}
+                    disabled={seeding}
+                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shrink-0 shadow-lg shadow-red-200"
+                  >
+                    Wipe Categories
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between bg-red-50 p-6 rounded-2xl border border-red-100">
+                  <div>
+                    <p className="font-bold text-red-900">Wipe Full Database</p>
+                    <p className="text-sm text-red-700/80 mt-1">
+                      WARNING: This will permanently delete ALL data (Products, Categories, Sliders, Producers, Press, etc). This cannot be undone.
+                    </p>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (window.confirm("Are you ABSOLUTELY sure you want to completely erase the database? All your uploaded products will be gone.")) {
+                        if (window.confirm("Double checking: DELETE EVERYTHING?")) {
+                          const success = await adminService.factoryReset();
+                          if (success) {
+                            alert('Database wiped completely. The website is now clean.');
+                            window.location.reload();
+                          } else {
+                            alert('Failed to drop the database. See console for details.');
+                          }
+                        }
+                      }
+                    }}
+                    className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition-colors shrink-0 shadow-lg shadow-red-200"
+                  >
+                    Factory Reset
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

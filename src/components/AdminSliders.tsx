@@ -83,6 +83,7 @@ export function AdminSliders() {
   const [editingSlider, setEditingSlider] = useState<SliderImage | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [canModify, setCanModify] = useState(true);
   
   const [newSlide, setNewSlide] = useState({
     imageUrl: '',
@@ -90,6 +91,24 @@ export function AdminSliders() {
     description: '',
     link: ''
   });
+
+  useEffect(() => {
+    // Determine edit permission based on custom user role
+    const customUserStr = localStorage.getItem('customAdminUser');
+    if (customUserStr) {
+      try {
+        const customUser = JSON.parse(customUserStr);
+        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.role === 'super_admin') {
+          setCanModify(true);
+        } else if (customUser.isCustom) {
+          const role = customUser.role;
+          setCanModify(role === 'admin' || role === 'editor');
+        }
+      } catch (e) {
+        console.error('Error parsing custom user role:', e);
+      }
+    }
+  }, []);
 
   const showStatus = (type: 'success' | 'error', text: string) => {
     setStatusMsg({ type, text });
@@ -235,12 +254,14 @@ export function AdminSliders() {
           <h2 className="text-xl font-display font-black text-accent-deep">Manage Showcase Banners</h2>
           <p className="text-gray-500 text-xs mt-1">Order and configure promotional slide shows visible to shoppers on the storefront.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-primary text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-accent-deep transition-all shadow-lg shadow-primary/20"
-        >
-          <Plus size={16} /> Add Banner
-        </button>
+        {canModify && (
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-primary text-white font-bold text-sm px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-accent-deep transition-all shadow-lg shadow-primary/20"
+          >
+            <Plus size={16} /> Add Banner
+          </button>
+        )}
       </div>
 
       {statusMsg && (
@@ -275,48 +296,50 @@ export function AdminSliders() {
               </div>
 
               {/* Action layout controls overlay */}
-              <div className="absolute top-4 right-4 z-10 flex gap-1 bg-black/70 backdrop-blur-md p-1 rounded-xl border border-white/10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md">
-                <button 
-                  onClick={() => handleMove(index, 'up')}
-                  disabled={index === 0}
-                  className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
-                  title="Move banner left/preceding"
-                >
-                  <ArrowUp size={16} />
-                </button>
-                <button 
-                  onClick={() => handleMove(index, 'down')}
-                  disabled={index === sliders.length - 1}
-                  className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
-                  title="Move banner right/succeeding"
-                >
-                  <ArrowDown size={16} />
-                </button>
-                <div className="w-[1px] bg-white/10 my-1 mx-1" />
-                <button 
-                  onClick={() => {
-                    setEditingSlider(slide);
-                    setNewSlide({
-                      imageUrl: slide.imageUrl,
-                      title: slide.title,
-                      description: slide.description,
-                      link: slide.link
-                    });
-                    setIsModalOpen(true);
-                  }}
-                  className="p-1.5 text-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
-                  title="Edit slide text and image"
-                >
-                  <Edit size={16} />
-                </button>
-                <button 
-                  onClick={() => handleDelete(slide.id)}
-                  className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                  title="Delete slide"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+              {canModify && (
+                <div className="absolute top-4 right-4 z-10 flex gap-1 bg-black/70 backdrop-blur-md p-1 rounded-xl border border-white/10 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-md">
+                  <button 
+                    onClick={() => handleMove(index, 'up')}
+                    disabled={index === 0}
+                    className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
+                    title="Move banner left/preceding"
+                  >
+                    <ArrowUp size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleMove(index, 'down')}
+                    disabled={index === sliders.length - 1}
+                    className="p-1.5 text-white hover:text-primary disabled:opacity-30 transition-colors"
+                    title="Move banner right/succeeding"
+                  >
+                    <ArrowDown size={16} />
+                  </button>
+                  <div className="w-[1px] bg-white/10 my-1 mx-1" />
+                  <button 
+                    onClick={() => {
+                      setEditingSlider(slide);
+                      setNewSlide({
+                        imageUrl: slide.imageUrl,
+                        title: slide.title,
+                        description: slide.description,
+                        link: slide.link
+                      });
+                      setIsModalOpen(true);
+                    }}
+                    className="p-1.5 text-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
+                    title="Edit slide text and image"
+                  >
+                    <Edit size={16} />
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(slide.id)}
+                    className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                    title="Delete slide"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )}
 
               {/* Cover Preview Image */}
               <div className="h-44 w-full relative bg-surface overflow-hidden shrink-0">

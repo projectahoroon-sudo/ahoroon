@@ -20,6 +20,9 @@ import Admin from './pages/Admin';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import RefundPolicy from './pages/RefundPolicy';
 import DeliveryPolicy from './pages/DeliveryPolicy';
+import Products from './pages/Products';
+import About from './pages/About';
+import Contact from './pages/Contact';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { Preloader } from './components/Preloader';
@@ -44,6 +47,9 @@ function AppContent() {
             <Route path="/profile" element={<PageWrapper><Profile /></PageWrapper>} />
             <Route path="/wishlist" element={<PageWrapper><Wishlist /></PageWrapper>} />
             <Route path="/admin" element={<PageWrapper><Admin /></PageWrapper>} />
+            <Route path="/products" element={<PageWrapper><Products /></PageWrapper>} />
+            <Route path="/about" element={<PageWrapper><About /></PageWrapper>} />
+            <Route path="/contact" element={<PageWrapper><Contact /></PageWrapper>} />
             <Route path="/privacy-policy" element={<PageWrapper><PrivacyPolicy /></PageWrapper>} />
             <Route path="/refund-policy" element={<PageWrapper><RefundPolicy /></PageWrapper>} />
             <Route path="/delivery-policy" element={<PageWrapper><DeliveryPolicy /></PageWrapper>} />
@@ -54,7 +60,7 @@ function AppContent() {
       </main>
       {!isAdminPath && (
         <>
-          <WhyUnique />
+          {location.pathname !== '/products' && location.pathname !== '/contact' && <WhyUnique />}
           <Footer />
           <WhatsAppButton />
           <BottomNav />

@@ -15,7 +15,7 @@ export function WhyUnique() {
   return (
     <section className="py-16 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-sans font-bold text-gray-900 text-center mb-12">🌿 কেন আমরা অনন্য? (Why Ahroroon Is Unique)</h2>
+        <h2 className="text-3xl font-sans font-bold text-gray-900 text-center mb-12">🌿 কেন আমরা অনন্য? (Why আহরোণ Is Unique)</h2>
         
         <p className="text-lg text-[#005900] text-center max-w-3xl mx-auto mb-16 italic">
           "বাজারের ভিড়ে খাঁটি আর নিরাপদ পণ্যের সন্ধান পাওয়া যখন মেলা ভার, তখন ‘আহরোণ’ আপনার জন্য নিয়ে এসেছে প্রকৃতির একদম আদি ও অকৃত্রিম স্বাদ। আমরা কোনো কৃত্রিম বা প্রক্রিয়াজাত পণ্য বিক্রি করি না; আমাদের প্রতিটি পণ্য সরাসরি মাটি, পাহাড় এবং বনের গভীর থেকে সংগৃহীত।"

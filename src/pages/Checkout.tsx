@@ -80,6 +80,27 @@ export default function Checkout() {
 
       const docRef = await addDoc(collection(db, 'orders'), orderData);
 
+      // Trigger automatic order notification email immediately on backend
+      try {
+        const notifyResponse = await fetch('/api/orders/notify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            orderId: docRef.id,
+          }),
+        });
+        const notifyResult = await notifyResponse.json();
+        if (notifyResult.success) {
+          console.log(`[EMAIL_TRIGGER] Order notification successfully completed. Email sent: ${notifyResult.emailSent}. Simulated: ${!!notifyResult.simulated}`);
+        } else {
+          console.error("[EMAIL_TRIGGER_ERROR] Backend notified error:", notifyResult.error);
+        }
+      } catch (notifyErr) {
+        console.error("Failed to trigger order notification API:", notifyErr);
+      }
+
       // Decrement product stock in Firestore
       for (const item of cart) {
         if (item.id) {
