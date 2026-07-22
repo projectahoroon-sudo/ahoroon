@@ -993,6 +993,11 @@ function ProductsTable({ products, categories, onEdit, onDelete }: any) {
                       {p.size} {p.unit || 'pcs'}
                     </span>
                   )}
+                  {p.origin && (
+                    <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
+                      <MapPin size={10} /> {p.origin}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -1081,11 +1086,18 @@ function ProductsTable({ products, categories, onEdit, onDelete }: any) {
                     </div>
                     <div>
                       <span className="block font-black text-accent-deep text-base md:text-lg line-clamp-1 mb-1">{p.name}</span>
-                      {p.size && (
-                        <span className="text-xs text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded border border-gray-100 uppercase tracking-wide">
-                          {p.size} {p.unit || 'pcs'}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {p.size && (
+                          <span className="text-xs text-gray-500 font-bold bg-gray-50 px-2 py-0.5 rounded border border-gray-100 uppercase tracking-wide">
+                            {p.size} {p.unit || 'pcs'}
+                          </span>
+                        )}
+                        {p.origin && (
+                          <span className="text-[10px] text-emerald-800 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 flex items-center gap-1 w-max">
+                            <MapPin size={10} /> {p.origin}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -1967,7 +1979,11 @@ function ProductModal({ product, onClose, onSave, categories }: any) {
     moq: product?.moq || 1,
     step: product?.step || 1,
     stock: product?.stock !== undefined ? product.stock : 100,
-    costPrice: product?.costPrice || 0
+    costPrice: product?.costPrice || 0,
+    origin: product?.origin || '',
+    harvestDate: product?.harvestDate || '',
+    labTestUrl: product?.labTestUrl || '',
+    isVerified: product?.isVerified !== undefined ? product.isVerified : true,
   });
   const [loading, setLoading] = useState(false);
   const [generatingAi, setGeneratingAi] = useState(false);
@@ -2305,6 +2321,61 @@ function ProductModal({ product, onClose, onSave, categories }: any) {
               value={formData.description}
               onChange={e => setFormData({...formData, description: e.target.value})}
             />
+          </div>
+
+          {/* Origin Details & Authenticity Section */}
+          <div className="space-y-4 pt-4 border-t border-gray-100 bg-primary/5 p-5 rounded-2xl border border-primary/10">
+            <div className="flex items-center gap-2 text-primary">
+              <MapPin size={18} />
+              <label className="text-xs font-black uppercase tracking-wider">Origin & Authenticity Details (উৎপত্তিস্থল ও প্রমাণীকরণ বিবরণ)</label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Origin Location (উৎপত্তিস্থল / উৎস)</label>
+                <input 
+                  type="text"
+                  className="w-full bg-white p-3.5 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 border border-gray-200 text-sm font-medium"
+                  placeholder="যেমন: সুন্দরবন, সাতক্ষীরা"
+                  value={formData.origin}
+                  onChange={e => setFormData({...formData, origin: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Collection / Harvest Date (সংগ্রহের সময়)</label>
+                <input 
+                  type="text"
+                  className="w-full bg-white p-3.5 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 border border-gray-200 text-sm font-medium"
+                  placeholder="যেমন: ১০ মার্চ, ২০২৪"
+                  value={formData.harvestDate}
+                  onChange={e => setFormData({...formData, harvestDate: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Lab Certificate URL (ল্যাব টেস্ট বা সার্টিফিকেট লিংক)</label>
+                <input 
+                  type="text"
+                  className="w-full bg-white p-3.5 rounded-xl outline-none focus:ring-2 focus:ring-primary/20 border border-gray-200 text-sm font-medium"
+                  placeholder="https://..."
+                  value={formData.labTestUrl}
+                  onChange={e => setFormData({...formData, labTestUrl: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-1.5 md:col-span-2 pt-1">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    className="w-4 h-4 rounded text-primary focus:ring-primary border-gray-300"
+                    checked={formData.isVerified}
+                    onChange={e => setFormData({...formData, isVerified: e.target.checked})}
+                  />
+                  <span className="text-xs font-bold text-accent-deep">Ahoroon Verified Tag (আহরোণ ভেরিফাইড ব্যাজ প্রদর্শন করুন)</span>
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4 pt-4 border-t border-gray-100">

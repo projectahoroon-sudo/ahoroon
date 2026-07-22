@@ -10,11 +10,15 @@ interface AuthenticityCardProps {
 }
 
 export const AuthenticityCard: React.FC<AuthenticityCardProps> = ({
-  origin = "সুন্দরবন, সাতক্ষীরা",
-  labTestUrl = "#",
-  harvestDate = "১০ মার্চ, ২০২৪",
+  origin,
+  labTestUrl,
+  harvestDate,
   isVerified = true
 }) => {
+  const displayOrigin = origin && origin.trim() ? origin : "সুন্দরবন, সাতক্ষীরা";
+  const displayHarvestDate = harvestDate && harvestDate.trim() ? harvestDate : "১০ মার্চ, ২০২৪";
+  const displayLabTestUrl = labTestUrl && labTestUrl.trim() ? labTestUrl : "#";
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
@@ -46,7 +50,7 @@ export const AuthenticityCard: React.FC<AuthenticityCardProps> = ({
           </div>
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-1">Origin Details</p>
-            <p className="font-bold text-accent-deep">{origin}</p>
+            <p className="font-bold text-accent-deep">{displayOrigin}</p>
             <p className="text-[10px] text-primary/60 font-medium">Direct Sourcing</p>
           </div>
         </div>
@@ -58,7 +62,7 @@ export const AuthenticityCard: React.FC<AuthenticityCardProps> = ({
           </div>
           <div>
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.15em] mb-1">Date of Collection</p>
-            <p className="font-bold text-accent-deep">{harvestDate}</p>
+            <p className="font-bold text-accent-deep">{displayHarvestDate}</p>
             <p className="text-[10px] text-primary/60 font-medium">Fresh Harvest</p>
           </div>
         </div>
@@ -73,7 +77,7 @@ export const AuthenticityCard: React.FC<AuthenticityCardProps> = ({
             <div className="flex items-center justify-between">
               <p className="font-bold text-accent-deep">BSTI & Lab Tested</p>
             </div>
-            <a href={labTestUrl} className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1 mt-0.5">
+            <a href={displayLabTestUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline font-bold flex items-center gap-1 mt-0.5">
               View Certificate <span className="text-[8px]">→</span>
             </a>
           </div>
