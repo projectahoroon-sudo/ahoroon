@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Upload } from 'lucide-react';
+import { Save, Upload, Truck, Key, CheckCircle, ExternalLink } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import { compressImage } from '../lib/imageUtils';
 
@@ -11,8 +11,24 @@ export default function AdminSettings() {
   const [seeding, setSeeding] = useState(false);
   const [canModify, setCanModify] = useState(true);
 
+  // Courier API Settings state
+  const [courierSettings, setCourierSettings] = useState({
+    defaultProvider: 'Steadfast Courier',
+    steadfastApiKey: '',
+    steadfastSecretKey: '',
+    pathaoClientId: '',
+    pathaoClientSecret: '',
+    pathaoUsername: '',
+    pathaoPassword: '',
+    pathaoStoreId: '',
+    redxAccessToken: '',
+    autoUpdateStatusOnBooking: true
+  });
+  const [courierSavedSuccess, setCourierSavedSuccess] = useState(false);
+
   useEffect(() => {
     loadSettings();
+    loadCourierSettings();
     
     // Determine edit permission based on custom user role
     const customUserStr = localStorage.getItem('customAdminUser');
@@ -45,6 +61,30 @@ export default function AdminSettings() {
       console.error('Error loading settings:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCourierSettings = async () => {
+    try {
+      const cs = await adminService.getCourierSettings();
+      if (cs) {
+        setCourierSettings(prev => ({ ...prev, ...cs }));
+      }
+    } catch (err) {
+      console.error('Error loading courier settings:', err);
+    }
+  };
+
+  const handleSaveCourierSettings = async () => {
+    setSaving(true);
+    try {
+      await adminService.updateCourierSettings(courierSettings);
+      setCourierSavedSuccess(true);
+      setTimeout(() => setCourierSavedSuccess(false), 3000);
+    } catch (err) {
+      alert('কুরিয়ার সেটিংস সংরক্ষণ করতে সমস্যা হয়েছে।');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -197,6 +237,201 @@ export default function AdminSettings() {
                   Remove Footer Logo
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Courier API Integration Section */}
+        <div className="pt-8 border-t border-gray-100 mt-8 space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center">
+                <Truck size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-accent-deep">Courier API Configuration (কুরিয়ার অটোমেশন এপিআই)</h2>
+                <p className="text-xs text-gray-500">অ্যাডমিন প্যানেল থেকে সরাসরি ১-ক্লিকে কুরিয়ার এন্ট্রি দিতে এপিআই তথ্য সেটআপ করুন।</p>
+              </div>
+            </div>
+            {canModify && (
+              <button
+                type="button"
+                onClick={handleSaveCourierSettings}
+                disabled={saving}
+                className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
+              >
+                {courierSavedSuccess ? <CheckCircle size={16} /> : <Save size={16} />}
+                {courierSavedSuccess ? 'সংরক্ষিত হয়েছে!' : 'Save Courier API Settings'}
+              </button>
+            )}
+          </div>
+
+          <div className="bg-emerald-50/40 p-5 rounded-3xl border border-emerald-100 space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 mb-1.5 uppercase tracking-wider">
+                  Default Courier Provider (ডিফল্ট কুরিয়ার)
+                </label>
+                <select
+                  value={courierSettings.defaultProvider}
+                  onChange={e => setCourierSettings({...courierSettings, defaultProvider: e.target.value})}
+                  className="w-full bg-white border border-gray-200 rounded-xl p-3 text-xs font-bold text-gray-800 outline-none focus:ring-2 focus:ring-emerald-500/20"
+                >
+                  <option value="Steadfast Courier">Steadfast Courier (স্টেডফাস্ট)</option>
+                  <option value="Pathao Courier">Pathao Courier (পাঠাও)</option>
+                  <option value="RedX Courier">RedX Courier (রেডএক্স)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-3 pt-6">
+                <input
+                  type="checkbox"
+                  id="autoStatus"
+                  checked={courierSettings.autoUpdateStatusOnBooking}
+                  onChange={e => setCourierSettings({...courierSettings, autoUpdateStatusOnBooking: e.target.checked})}
+                  className="w-4 h-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                />
+                <label htmlFor="autoStatus" className="text-xs font-bold text-gray-700 cursor-pointer">
+                  কুরিয়ার এন্ট্রি দিলে অর্ডার স্ট্যাটাস স্বয়ংক্রিয়ভাবে "Shipped" করুন
+                </label>
+              </div>
+            </div>
+
+            {/* Steadfast API Config */}
+            <div className="bg-white p-4 rounded-2xl border border-emerald-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                  <span className="text-xs font-black text-accent-deep uppercase tracking-wider">Steadfast Courier API Keys</span>
+                </div>
+                <a 
+                  href="https://portal.steadfast.com.bd/user/api" 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="text-[11px] font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                >
+                  Steadfast API Panel <ExternalLink size={12} />
+                </a>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    API Key
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Steadfast API Key..."
+                    value={courierSettings.steadfastApiKey}
+                    onChange={e => setCourierSettings({...courierSettings, steadfastApiKey: e.target.value})}
+                    className="w-full bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    Secret Key
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Steadfast Secret Key..."
+                    value={courierSettings.steadfastSecretKey}
+                    onChange={e => setCourierSettings({...courierSettings, steadfastSecretKey: e.target.value})}
+                    className="w-full bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-xs font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Pathao API Config */}
+            <div className="bg-white p-4 rounded-2xl border border-emerald-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500"></span>
+                  <span className="text-xs font-black text-accent-deep uppercase tracking-wider">Pathao Courier API Credentials</span>
+                </div>
+                <a 
+                  href="https://merchant.pathao.com/" 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="text-[11px] font-bold text-red-600 hover:underline flex items-center gap-1"
+                >
+                  Pathao Merchant Panel <ExternalLink size={12} />
+                </a>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    Client ID
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Pathao Client ID"
+                    value={courierSettings.pathaoClientId}
+                    onChange={e => setCourierSettings({...courierSettings, pathaoClientId: e.target.value})}
+                    className="w-full bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    Client Secret
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Pathao Secret"
+                    value={courierSettings.pathaoClientSecret}
+                    onChange={e => setCourierSettings({...courierSettings, pathaoClientSecret: e.target.value})}
+                    className="w-full bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    Store ID
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 1234"
+                    value={courierSettings.pathaoStoreId}
+                    onChange={e => setCourierSettings({...courierSettings, pathaoStoreId: e.target.value})}
+                    className="w-full bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-xs font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* RedX API Config */}
+            <div className="bg-white p-4 rounded-2xl border border-emerald-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span>
+                  <span className="text-xs font-black text-accent-deep uppercase tracking-wider">RedX Courier Access Token</span>
+                </div>
+                <a 
+                  href="https://redx.com.bd/" 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="text-[11px] font-bold text-orange-600 hover:underline flex items-center gap-1"
+                >
+                  RedX Panel <ExternalLink size={12} />
+                </a>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                  Access Token
+                </label>
+                <input
+                  type="password"
+                  placeholder="RedX Bearer Token..."
+                  value={courierSettings.redxAccessToken}
+                  onChange={e => setCourierSettings({...courierSettings, redxAccessToken: e.target.value})}
+                  className="w-full bg-gray-50 p-2.5 rounded-xl border border-gray-200 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-[11px] text-amber-800 font-medium flex items-start gap-2">
+              <span className="font-bold shrink-0">💡 টিপস:</span>
+              <span>
+                আপনি এপিআই কি ফাঁকা রাখলেও টেস্ট বা ডেমো মোডে ১-ক্লিকে কুরিয়ার এন্ট্রি দিতে পারবেন এবং অটোমেটিক প্রফেশনাল ট্র্যাকিং কোড জেনারেট হয়ে অর্ডারে যুক্ত হয়ে যাবে।
+              </span>
             </div>
           </div>
         </div>

@@ -35,7 +35,11 @@ import {
   User,
   Phone,
   MapPin,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Copy,
+  Send,
+  ExternalLink,
+  CheckCircle
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -78,6 +82,7 @@ export default function Admin() {
   const [editingUser, setEditingUser] = useState<Partial<AppUser> | null>(null);
   const [editingManualInvoice, setEditingManualInvoice] = useState<Partial<ManualInvoice> | null>(null);
   const [viewingOrder, setViewingOrder] = useState<any | null>(null);
+  const [courierBookingOrder, setCourierBookingOrder] = useState<any | null>(null);
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isManualInvoicePrintOpen, setIsManualInvoicePrintOpen] = useState(false);
@@ -672,7 +677,7 @@ export default function Admin() {
             
             <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
               <h3 className="text-xl font-display font-black mb-6">Recent Orders</h3>
-              <OrdersTable orders={orders.slice(0, 5)} onUpdateStatus={loadData} onView={setViewingOrder} />
+              <OrdersTable orders={orders.slice(0, 5)} onUpdateStatus={loadData} onView={setViewingOrder} onCourierBook={setCourierBookingOrder} />
             </div>
           </div>
         )}
@@ -717,7 +722,7 @@ export default function Admin() {
 
         {activeTab === 'orders' && (
           <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
-            <OrdersTable orders={orders} onUpdateStatus={loadData} onView={setViewingOrder} />
+            <OrdersTable orders={orders} onUpdateStatus={loadData} onView={setViewingOrder} onCourierBook={setCourierBookingOrder} />
           </div>
         )}
 
@@ -851,11 +856,22 @@ export default function Admin() {
             products={products}
           />
         )}
+        {courierBookingOrder && (
+          <CourierBookingModal
+            order={courierBookingOrder}
+            onClose={() => setCourierBookingOrder(null)}
+            onSuccess={loadData}
+          />
+        )}
         {viewingOrder && (
           <OrderDetailsModal 
             order={viewingOrder} 
             onClose={() => setViewingOrder(null)} 
             onInvoice={() => setIsInvoiceOpen(true)}
+            onCourierBook={(o: any) => {
+              setViewingOrder(null);
+              setCourierBookingOrder(o);
+            }}
           />
         )}
         {isInvoiceOpen && viewingOrder && (
@@ -1152,7 +1168,7 @@ function ProductsTable({ products, categories, onEdit, onDelete }: any) {
   );
 }
 
-function OrdersTable({ orders, onUpdateStatus, onView }: any) {
+function OrdersTable({ orders, onUpdateStatus, onView, onCourierBook }: any) {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered': return 'text-emerald-500 bg-emerald-50';
@@ -1199,6 +1215,27 @@ function OrdersTable({ orders, onUpdateStatus, onView }: any) {
                   {o.customer?.address}
                 </p>
               </div>
+
+              {o.trackingCode ? (
+                <div className="bg-emerald-50 border border-emerald-100 p-2.5 rounded-2xl flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-800">
+                    <Truck size={14} /> {o.courier || 'Courier'}: <span className="font-mono">{o.trackingCode}</span>
+                  </div>
+                  {o.trackingUrl && (
+                    <a href={o.trackingUrl} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-0.5">
+                      Track <ExternalLink size={10} />
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onCourierBook && onCourierBook(o)}
+                  className="w-full py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-bold border border-emerald-200 transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Truck size={14} /> 🚀 কুরিয়ার এন্ট্রি দিন (Book Courier)
+                </button>
+              )}
 
               <div className="flex items-center justify-between pt-3 border-t border-gray-50 flex-wrap gap-2 text-sm">
                 <div className="space-y-0.5">
@@ -1249,12 +1286,12 @@ function OrdersTable({ orders, onUpdateStatus, onView }: any) {
         <table className="w-full text-left">
           <thead className="bg-surface border-b border-gray-100">
             <tr>
-              <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Order ID (অর্ডার আইডি)</th>
+              <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Order ID</th>
               <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Customer (গ্রাহক)</th>
-              <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Items (আইটেম)</th>
+              <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Courier (কুরিয়ার)</th>
               <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Total (মোট)</th>
               <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Status (স্ট্যাটাস)</th>
-              <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-400 text-right">Update (আপডেট)</th>
+              <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-400 text-right">Action (অ্যাকশন)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -1268,7 +1305,24 @@ function OrdersTable({ orders, onUpdateStatus, onView }: any) {
                     <div className="text-xs text-gray-500 font-semibold mb-1 flex items-center gap-1"><Phone size={12} className="text-gray-400" /> {o.customer?.phone}</div>
                     <div className="text-xs text-gray-400 font-medium line-clamp-1 italic max-w-xs">{o.customer?.address}</div>
                   </td>
-                  <td className="px-6 py-5 text-sm md:text-base font-semibold text-gray-700">{o.items.length} items</td>
+                  <td className="px-6 py-5">
+                    {o.trackingCode ? (
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full inline-flex items-center gap-1">
+                          <Truck size={12} /> {o.courier || 'Courier'}
+                        </span>
+                        <p className="text-[11px] font-mono font-bold text-gray-600 block pl-1">{o.trackingCode}</p>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onCourierBook && onCourierBook(o)}
+                        className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 shadow-sm"
+                      >
+                        <Truck size={14} /> 🚀 Book Courier
+                      </button>
+                    )}
+                  </td>
                   <td className="px-6 py-5 font-black text-base text-accent-deep">৳{o.total}</td>
                   <td className="px-6 py-5">
                     <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase border", getStatusColor(o.status))}>
@@ -1460,7 +1514,250 @@ function CategoryModal({ category, onClose, onSave }: any) {
   );
 }
 
-function OrderDetailsModal({ order, onClose, onInvoice }: any) {
+function CourierBookingModal({ order, onClose, onSuccess }: { order: any; onClose: () => void; onSuccess: () => void }) {
+  const [provider, setProvider] = useState('Steadfast Courier');
+  const [name, setName] = useState(order.customer?.name || '');
+  const [phone, setPhone] = useState(order.customer?.phone || '');
+  const [address, setAddress] = useState(order.customer?.address || '');
+  const [codAmount, setCodAmount] = useState<number>(order.grandTotal || order.total || 0);
+  const [note, setNote] = useState(order.notes || 'Ahoroon Product Delivery');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    adminService.getCourierSettings().then(cs => {
+      if (cs && cs.defaultProvider) {
+        setProvider(cs.defaultProvider);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handleBook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await adminService.bookCourier({
+        orderId: order.id,
+        courierProvider: provider,
+        recipientName: name,
+        recipientPhone: phone,
+        recipientAddress: address,
+        codAmount: Number(codAmount),
+        note: note
+      });
+      setResult(res);
+      onSuccess();
+    } catch (err: any) {
+      alert(err.message || 'Courier booking failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-accent-deep/60 backdrop-blur-md"
+    >
+      <motion.div 
+        initial={{ scale: 0.95, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        className="bg-white max-w-lg w-full rounded-[2.5rem] shadow-2xl p-6 sm:p-8 relative flex flex-col max-h-[90vh]"
+      >
+        <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-primary transition-colors">
+          <X size={20} />
+        </button>
+
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+            <Truck size={22} />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-accent-deep">কুরিয়ার এন্ট্রি ও ট্র্যাকিং কোড</h2>
+            <p className="text-xs text-gray-500 font-mono">Order #{order.id?.slice(0, 8).toUpperCase()}</p>
+          </div>
+        </div>
+
+        {result ? (
+          <div className="space-y-5 my-4">
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 text-center space-y-3">
+              <div className="w-12 h-12 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto shadow-lg shadow-emerald-200">
+                <CheckCircle size={28} />
+              </div>
+              <h3 className="text-lg font-black text-emerald-900">কুরিয়ার বুকিং সফল হয়েছে!</h3>
+              <p className="text-xs text-emerald-700 font-medium">{result.message}</p>
+            </div>
+
+            <div className="bg-surface p-4 rounded-2xl border border-gray-100 space-y-3 text-xs">
+              <div className="flex justify-between items-center border-b border-gray-200/60 pb-2">
+                <span className="font-bold text-gray-500">Courier Provider:</span>
+                <span className="font-black text-accent-deep">{result.courierProvider}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-200/60 pb-2">
+                <span className="font-bold text-gray-500">Tracking Code:</span>
+                <span className="font-mono font-black text-primary text-sm">{result.trackingCode}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-gray-200/60 pb-2">
+                <span className="font-bold text-gray-500">Consignment ID:</span>
+                <span className="font-mono font-bold text-gray-700">{result.consignmentId}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-gray-500">COD Amount:</span>
+                <span className="font-black text-emerald-700 text-sm">৳{codAmount}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => copyToClipboard(result.trackingCode)}
+                className="flex-1 bg-surface hover:bg-gray-100 text-gray-700 py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 border border-gray-200"
+              >
+                <Copy size={16} /> {copied ? 'Copied!' : 'Copy Code'}
+              </button>
+              {result.trackingUrl && (
+                <a
+                  href={result.trackingUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-100"
+                >
+                  <ExternalLink size={16} /> Track Online
+                </a>
+              )}
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-full bg-accent-deep text-white py-3.5 rounded-xl font-bold text-xs hover:bg-black transition-all"
+            >
+              সম্পন্ন করুন (Close)
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleBook} className="space-y-4 my-2 overflow-y-auto pr-1">
+            <div>
+              <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                Select Courier (কুরিয়ার সার্ভিস)
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { name: 'Steadfast Courier', label: 'Steadfast', color: 'border-emerald-500 text-emerald-700 bg-emerald-50/50' },
+                  { name: 'Pathao Courier', label: 'Pathao', color: 'border-red-500 text-red-700 bg-red-50/50' },
+                  { name: 'RedX Courier', label: 'RedX', color: 'border-orange-500 text-orange-700 bg-orange-50/50' }
+                ].map(c => (
+                  <button
+                    key={c.name}
+                    type="button"
+                    onClick={() => setProvider(c.name)}
+                    className={cn(
+                      "p-2.5 rounded-xl border text-xs font-bold transition-all text-center",
+                      provider === c.name ? `${c.color} ring-2 ring-emerald-500/30` : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                    )}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Recipient Name (গ্রাহকের নাম)</label>
+                <input
+                  type="text"
+                  required
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Recipient Phone (মোবাইল)</label>
+                <input
+                  type="text"
+                  required
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Delivery Address (ঠিকানা)</label>
+              <textarea
+                rows={2}
+                required
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500/20"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">COD Amount / সংগ্রহযোগ্য (৳)</label>
+                <input
+                  type="number"
+                  required
+                  value={codAmount}
+                  onChange={e => setCodAmount(Number(e.target.value))}
+                  className="w-full bg-emerald-50/50 border border-emerald-200 rounded-xl p-2.5 text-xs font-black text-emerald-900 focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1">Note / নোট</label>
+                <input
+                  type="text"
+                  value={note}
+                  onChange={e => setNote(e.target.value)}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl p-2.5 text-xs font-medium focus:ring-2 focus:ring-emerald-500/20"
+                />
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-gray-100 flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-gray-100 text-gray-600 py-3 rounded-xl font-bold text-xs hover:bg-gray-200 transition-all"
+              >
+                বাতিল (Cancel)
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {loading ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></div>
+                ) : (
+                  <>
+                    <Send size={16} /> 🚀 Confirm Courier Booking
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function OrderDetailsModal({ order, onClose, onInvoice, onCourierBook }: any) {
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -1502,6 +1799,42 @@ function OrderDetailsModal({ order, onClose, onInvoice }: any) {
               <p className="font-bold text-accent-deep leading-relaxed">{order.customer?.address}</p>
             </div>
           </div>
+
+          {/* Courier Info / Booking Trigger */}
+          {order.trackingCode ? (
+            <div className="bg-emerald-50/80 p-5 rounded-3xl border border-emerald-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+                  <Truck size={14} /> Courier & Tracking
+                </span>
+                {order.trackingUrl && (
+                  <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1">
+                    Live Track <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+              <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
+                <div>
+                  <p className="text-xs text-gray-500 font-semibold">{order.courier || 'Courier Service'}</p>
+                  <p className="text-sm font-mono font-black text-emerald-900 tracking-wide">{order.trackingCode}</p>
+                </div>
+                {order.consignmentId && (
+                  <div className="text-right">
+                    <p className="text-[10px] text-gray-400 uppercase font-bold">Consignment ID</p>
+                    <p className="text-xs font-mono font-bold text-gray-700">{order.consignmentId}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onCourierBook && onCourierBook(order)}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-3xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 transition-all cursor-pointer"
+            >
+              <Truck size={18} /> 🚀 Send to Courier (কুরিয়ার অটোমেশন এন্ট্রি দিন)
+            </button>
+          )}
 
           {/* Items */}
           <div className="space-y-4">
@@ -1875,6 +2208,12 @@ function OrderDetailsModal({ order, onClose, onInvoice }: any) {
                   <span className="text-gray-500 font-bold">Payment Status:</span>
                   <span className="font-extrabold text-green-600">{order.status?.toUpperCase() || 'PAID'}</span>
                 </div>
+                {order.trackingCode && (
+                  <div className="flex justify-between border-t border-gray-100 pt-2">
+                    <span className="text-gray-500 font-bold">Courier Tracking:</span>
+                    <span className="font-mono font-black text-emerald-700 text-xs">{order.courier || 'Courier'}: {order.trackingCode}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

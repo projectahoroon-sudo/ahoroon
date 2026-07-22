@@ -571,6 +571,66 @@ export const adminService = {
     }
   },
 
+  // Courier Automation (Steadfast / Pathao / RedX)
+  async bookCourier(bookingData: {
+    orderId: string;
+    courierProvider: string;
+    recipientName: string;
+    recipientPhone: string;
+    recipientAddress: string;
+    codAmount: number;
+    note?: string;
+    apiKey?: string;
+    secretKey?: string;
+  }) {
+    try {
+      const response = await fetch('/api/courier/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookingData)
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Courier booking failed');
+      }
+      safeRemoveItem('orders');
+      return data;
+    } catch (e: any) {
+      console.error('bookCourier error:', e);
+      throw e;
+    }
+  },
+
+  async getCourierSettings() {
+    try {
+      const docRef = doc(db, 'settings', 'courier');
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        safeSetItem('courierSettings', JSON.stringify(data));
+        return data;
+      }
+      const local = safeGetItem('courierSettings');
+      return local ? JSON.parse(local) : null;
+    } catch (e) {
+      const local = safeGetItem('courierSettings');
+      return local ? JSON.parse(local) : null;
+    }
+  },
+
+  async updateCourierSettings(settings: any) {
+    try {
+      const docRef = doc(db, 'settings', 'courier');
+      await setDoc(docRef, {
+        ...settings,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      safeSetItem('courierSettings', JSON.stringify(settings));
+    } catch (e) {
+      safeSetItem('courierSettings', JSON.stringify(settings));
+    }
+  },
+
   async factoryReset() {
     const collectionsToClear = [
       'products',
