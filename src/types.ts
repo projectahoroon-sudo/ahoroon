@@ -31,6 +31,8 @@ export interface Category {
   id: string;
   name: string;
   icon: string;
+  image?: string;
+  slug?: string;
 }
 
 export interface CartItem extends Product {

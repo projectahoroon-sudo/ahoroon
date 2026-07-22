@@ -725,8 +725,12 @@ export default function Admin() {
             {categories.map((cat, idx) => (
               <div key={`cat-grid-${cat.id || 'cat'}-${idx}`} className="bg-white p-6 rounded-3xl border border-gray-100 flex items-center justify-between group hover:border-primary transition-all shadow-sm hover:shadow-lg">
                 <div className="flex items-center gap-4 min-w-0 flex-1">
-                  <div className="w-14 h-14 bg-surface rounded-2xl flex-shrink-0 flex items-center justify-center text-primary shadow-inner">
-                    <CategoryIcon name={cat.icon} size={24} />
+                  <div className="w-14 h-14 bg-emerald-50 rounded-full border border-emerald-500/20 flex-shrink-0 flex items-center justify-center text-primary shadow-inner overflow-hidden">
+                    {cat.image ? (
+                      <img src={cat.image} alt={cat.name} className="w-full h-full object-cover rounded-full" />
+                    ) : (
+                      <CategoryIcon name={cat.icon} size={24} />
+                    )}
                   </div>
                   <div className="min-w-0">
                     <span className="block font-bold text-accent-deep truncate">{cat.name}</span>
@@ -1297,7 +1301,8 @@ function CategoryModal({ category, onClose, onSave }: any) {
   const [formData, setFormData] = useState({
     name: category?.name || '',
     slug: category?.slug || '',
-    icon: category?.icon || 'Package'
+    icon: category?.icon || 'Package',
+    image: category?.image || ''
   });
   const [loading, setLoading] = useState(false);
 
@@ -1319,7 +1324,7 @@ function CategoryModal({ category, onClose, onSave }: any) {
     }
   };
 
-  const icons = ['Package', 'Tag', 'Sparkles', 'ShoppingCart', 'LayoutGrid', 'LayoutDashboard', 'Utensils', 'Fish', 'Mountain'];
+  const icons = ['Package', 'Tag', 'Sparkles', 'ShoppingCart', 'LayoutGrid', 'LayoutDashboard', 'Utensils', 'Fish', 'Mountain', 'Leaf', 'Wheat', 'Milk', 'Apple', 'Droplets', 'Flame'];
 
   return (
     <motion.div 
@@ -1331,13 +1336,13 @@ function CategoryModal({ category, onClose, onSave }: any) {
       <motion.div 
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
-        className="bg-white max-w-md w-full max-h-[90vh] overflow-y-auto rounded-[2.5rem] shadow-2xl p-6 md:p-8 relative"
+        className="bg-white max-w-lg w-full max-h-[90vh] overflow-y-auto rounded-[2.5rem] shadow-2xl p-6 md:p-8 relative"
       >
         <button onClick={onClose} className="absolute top-6 right-6 p-2 text-gray-400 hover:text-primary transition-colors">
           <X size={24} />
         </button>
 
-        <h2 className="text-2xl font-display font-black text-accent-deep mb-8">
+        <h2 className="text-2xl font-display font-black text-accent-deep mb-6">
           {category?.id ? 'Edit Category' : 'Add New Category'}
         </h2>
 
@@ -1347,6 +1352,7 @@ function CategoryModal({ category, onClose, onSave }: any) {
             <input 
               required
               className="w-full bg-surface p-4 rounded-2xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+              placeholder="e.g. নিরাপদ আবাদের চাল"
               value={formData.name}
               onChange={e => {
                 const name = e.target.value;
@@ -1357,8 +1363,57 @@ function CategoryModal({ category, onClose, onSave }: any) {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Icon</label>
-            <div className="grid grid-cols-5 gap-3">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Category Image (Circular Thumbnail)</label>
+            <div className="flex items-center gap-4">
+              <div className="w-20 h-20 rounded-full border-2 border-emerald-500/20 bg-emerald-50 flex items-center justify-center shrink-0 overflow-hidden shadow-inner">
+                {formData.image ? (
+                  <img src={formData.image} alt="Category Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <CategoryIcon name={formData.icon || 'Tag'} size={28} className="text-emerald-600" />
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <input 
+                  type="url"
+                  className="w-full bg-surface p-3 text-xs rounded-xl outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                  placeholder="Paste Image URL (https://...)"
+                  value={formData.image}
+                  onChange={e => setFormData({ ...formData, image: e.target.value })}
+                />
+                <label className="cursor-pointer block">
+                  <div className="w-full bg-surface py-2.5 px-3 rounded-xl border border-dashed border-gray-300 hover:border-primary transition-all flex items-center justify-center gap-2 text-gray-500 font-bold text-xs">
+                    <Plus size={16} />
+                    <span>Upload Image File</span>
+                  </div>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = async () => {
+                          try {
+                            const original = reader.result as string;
+                            const compressed = await compressImage(original, 400, 400, 0.7);
+                            setFormData({ ...formData, image: compressed });
+                          } catch (err) {
+                            console.error('Image compression failed:', err);
+                          }
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Icon Fallback</label>
+            <div className="grid grid-cols-5 gap-2.5">
               {icons.map((iconName, idx) => (
                 <button
                   key={`icon-btn-${iconName}-${idx}`}

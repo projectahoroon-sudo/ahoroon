@@ -84,9 +84,18 @@ export default function Categories() {
                 {/* Visual glow on element hover */}
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-50/10 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none duration-500" />
 
-                {/* Icon Container */}
-                <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-all duration-500 group-hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)]">
-                  <CategoryIcon name={cat.icon || 'Tag'} size={28} strokeWidth={1.5} />
+                {/* Circular Avatar Container */}
+                <div className="w-20 h-20 rounded-full bg-emerald-50 border-2 border-emerald-500/20 overflow-hidden flex items-center justify-center text-emerald-600 group-hover:border-emerald-500 group-hover:ring-4 group-hover:ring-emerald-500/15 group-hover:shadow-[0_8px_16px_rgba(16,185,129,0.2)] transition-all duration-300">
+                  {cat.image ? (
+                    <img 
+                      src={cat.image} 
+                      alt={cat.name} 
+                      className="w-full h-full object-cover rounded-full group-hover:scale-110 transition-transform duration-500"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <CategoryIcon name={cat.icon || 'Tag'} size={28} strokeWidth={1.5} />
+                  )}
                 </div>
 
                 {/* Details */}

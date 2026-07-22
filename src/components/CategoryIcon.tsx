@@ -4,6 +4,7 @@ import { LucideProps } from 'lucide-react';
 interface CategoryIconProps extends LucideProps {
   name: string;
   strokeWidth?: number | string;
+  className?: string;
 }
 
 export const CategoryIcon = ({ name, ...props }: CategoryIconProps) => {

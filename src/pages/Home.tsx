@@ -256,42 +256,96 @@ export default function Home() {
       </section>
       )}
 
-      {/* Category Quick Navigation Row */}
-      <section className="px-4 md:px-8 max-w-7xl mx-auto -mt-12 md:-mt-16">
-        <div id="category-quick-buttons" className="w-full flex flex-wrap items-center gap-2 select-none justify-center py-2">
-          <Link
-            to="/category/all"
-            className={cn(
-              "flex items-center gap-1.5 px-4.5 py-2.5 rounded-full text-xs md:text-sm font-bold uppercase tracking-wider transition-all duration-100 select-none whitespace-nowrap border shrink-0 transform-gpu active:translate-y-[1.5px] active:border-b-[1px]",
-              location.pathname === '/category/all'
-                ? "bg-[#005900] text-white border-[#005900] border-b-[3px] border-b-[#004000] shadow-[0_5px_12px_-3px_rgba(0,89,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.4)] md:hover:brightness-110"
-                : "bg-[#005900]/8 text-[#005900] border-[#005900]/15 border-b-[3px] border-b-[#005900]/10 hover:bg-[#005900]/12 hover:text-[#004000]"
-            )}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>সব পণ্য</span>
-          </Link>
+      {/* Circular Avatar Category Navigation Grid */}
+      <section className="px-4 md:px-8 max-w-7xl mx-auto my-8">
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl p-4 sm:p-6 md:p-8 border border-slate-100 shadow-xl shadow-slate-200/50">
+          <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+              <h2 className="text-base sm:text-lg md:text-xl font-display font-black text-slate-800 tracking-tight">ক্যাটাগরি সমূহ</h2>
+            </div>
+            <Link 
+              to="/categories" 
+              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1 transition-colors"
+            >
+              <span>সবগুলো দেখুন</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
 
-          {categories.map((cat, idx) => {
-            const isActive = location.pathname === `/category/${cat.id}`;
-            const appliedStyle = isActive
-              ? "bg-[#005900] text-white border-[#005900] border-b-[3px] border-b-[#004000] shadow-[0_5px_12px_-3px_rgba(0,89,0,0.35),inset_0_1.5px_2px_rgba(255,255,255,0.4)] md:hover:brightness-110"
-              : "bg-[#005900]/8 text-[#005900] border-[#005900]/15 border-b-[3px] border-b-[#005900]/10 hover:bg-[#005900]/12 hover:text-[#004000]";
+          <div id="category-quick-grid" className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-5 md:gap-6 justify-items-center">
+            {/* All Products Circular Button */}
+            <Link
+              to="/category/all"
+              className="group flex flex-col items-center text-center select-none"
+            >
+              <div className={cn(
+                "w-16 h-16 xs:w-20 xs:h-20 sm:w-22 sm:h-22 md:w-24 md:h-24 rounded-full overflow-hidden relative flex items-center justify-center transition-all duration-300 border-2 shadow-sm group-hover:shadow-xl group-hover:scale-105 active:scale-95",
+                location.pathname === '/category/all'
+                  ? "bg-emerald-600 border-emerald-600 text-white ring-4 ring-emerald-500/30 shadow-lg"
+                  : "bg-emerald-50 border-emerald-500/20 text-emerald-600 group-hover:border-emerald-500 group-hover:ring-4 group-hover:ring-emerald-500/15"
+              )}>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="text-[10px] sm:text-xs font-black uppercase tracking-wider">ALL</span>
+                </div>
+              </div>
+              <span className={cn(
+                "mt-2 text-[11px] sm:text-xs md:text-sm font-bold transition-colors text-center line-clamp-1 max-w-[85px] sm:max-w-[105px]",
+                location.pathname === '/category/all' ? "text-emerald-700 font-extrabold" : "text-slate-800 group-hover:text-emerald-600"
+              )}>
+                সব পণ্য
+              </span>
+            </Link>
 
-            return (
-              <Link
-                key={`${cat.id}-${idx}`}
-                to={`/category/${cat.id}`}
-                className={cn(
-                  "flex items-center gap-1.5 px-4.5 py-2.5 rounded-full text-xs md:text-sm font-bold transition-all duration-100 select-none whitespace-nowrap border shrink-0 transform-gpu active:translate-y-[1.5px] active:border-b-[1px]",
-                  appliedStyle
-                )}
-              >
-                <CategoryIcon name={cat.icon} size={13} strokeWidth={2.5} />
-                <span>{cat.name}</span>
-              </Link>
-            );
-          })}
+            {/* Category Circular Image Items */}
+            {categories.map((cat, idx) => {
+              const isActive = location.pathname === `/category/${cat.id}`;
+
+              return (
+                <Link
+                  key={`${cat.id}-${idx}`}
+                  to={`/category/${cat.id}`}
+                  className="group flex flex-col items-center text-center select-none"
+                >
+                  <div className={cn(
+                    "w-16 h-16 xs:w-20 xs:h-20 sm:w-22 sm:h-22 md:w-24 md:h-24 rounded-full overflow-hidden relative bg-slate-100 transition-all duration-300 border-2 shadow-sm group-hover:shadow-xl group-hover:scale-105 active:scale-95",
+                    isActive
+                      ? "border-emerald-600 ring-4 ring-emerald-500/30 shadow-md shadow-emerald-600/20"
+                      : "border-slate-200/80 group-hover:border-emerald-500 group-hover:ring-4 group-hover:ring-emerald-500/15"
+                  )}>
+                    {cat.image ? (
+                      <img 
+                        src={cat.image} 
+                        alt={cat.name} 
+                        className="w-full h-full object-cover rounded-full group-hover:scale-115 transition-transform duration-500 ease-out"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          // Fallback on load error
+                          (e.target as HTMLElement).style.display = 'none';
+                          const parent = (e.target as HTMLElement).parentElement;
+                          if (parent) {
+                            parent.classList.add('flex', 'items-center', 'justify-center', 'bg-emerald-50', 'text-emerald-600');
+                          }
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center text-emerald-600 group-hover:from-emerald-500 group-hover:to-teal-600 group-hover:text-white transition-all duration-300">
+                        <CategoryIcon name={cat.icon || 'Tag'} size={24} strokeWidth={2} />
+                      </div>
+                    )}
+                  </div>
+
+                  <span className={cn(
+                    "mt-2 text-[11px] sm:text-xs md:text-sm font-bold transition-colors text-center line-clamp-2 max-w-[85px] sm:max-w-[105px] leading-tight",
+                    isActive ? "text-emerald-700 font-black" : "text-slate-800 group-hover:text-emerald-600"
+                  )}>
+                    {cat.name}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </section>
 
