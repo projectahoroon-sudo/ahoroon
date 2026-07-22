@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { Product, Category, AppUser, ManualInvoice } from '../types';
+import { safeSetItem, safeGetItem, safeRemoveItem } from '../lib/safeStorage';
 
 export enum OperationType {
   CREATE = 'create',
@@ -37,7 +38,7 @@ interface FirestoreErrorInfo {
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errorMessage = error instanceof Error ? error.message : String(error);
   if (errorMessage.includes('resource-exhausted') || errorMessage.includes('Quota limit exceeded')) {
-    localStorage.setItem('firestoreDisabled', 'true');
+    safeSetItem('firestoreDisabled', 'true');
   }
 
   const errInfo: FirestoreErrorInfo = {
@@ -55,7 +56,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 function checkFirestoreDisabled() {
-  return localStorage.getItem('firestoreDisabled') === 'true';
+  return safeGetItem('firestoreDisabled') === 'true';
 }
 
 export const adminService = {
@@ -74,7 +75,7 @@ export const adminService = {
   // Products
   async getProducts() {
     if (checkFirestoreDisabled()) {
-      const cached = localStorage.getItem('products');
+      const cached = safeGetItem('products');
       return cached ? JSON.parse(cached) : [];
     }
     const path = 'products';
@@ -82,7 +83,7 @@ export const adminService = {
       const q = query(collection(db, path), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-      localStorage.setItem('products', JSON.stringify(data));
+      safeSetItem('products', JSON.stringify(data));
       return data;
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, path);
@@ -97,7 +98,7 @@ export const adminService = {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      localStorage.removeItem('products');
+      safeRemoveItem('products');
       return docRef.id;
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, path);
@@ -111,7 +112,7 @@ export const adminService = {
         ...product,
         updatedAt: serverTimestamp(),
       });
-      localStorage.removeItem('products');
+      safeRemoveItem('products');
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, path);
     }
@@ -121,7 +122,7 @@ export const adminService = {
     const path = `products/${id}`;
     try {
       await deleteDoc(doc(db, 'products', id));
-      localStorage.removeItem('products');
+      safeRemoveItem('products');
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, path);
     }
@@ -130,7 +131,7 @@ export const adminService = {
   // Categories
   async getCategories() {
     if (checkFirestoreDisabled()) {
-      const cached = localStorage.getItem('categories');
+      const cached = safeGetItem('categories');
       return cached ? JSON.parse(cached) : [];
     }
     const path = 'categories';
@@ -140,7 +141,7 @@ export const adminService = {
         const { id, ...rest } = doc.data() as Category;
         return { id: doc.id, ...rest };
       });
-      localStorage.setItem('categories', JSON.stringify(data));
+      safeSetItem('categories', JSON.stringify(data));
       return data;
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, path);
@@ -154,7 +155,7 @@ export const adminService = {
         ...category,
         createdAt: serverTimestamp(),
       });
-      localStorage.removeItem('categories');
+      safeRemoveItem('categories');
       return docRef.id;
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, path);
@@ -168,7 +169,7 @@ export const adminService = {
         ...category,
         updatedAt: serverTimestamp(),
       });
-      localStorage.removeItem('categories');
+      safeRemoveItem('categories');
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, path);
     }
@@ -178,7 +179,7 @@ export const adminService = {
     const path = `categories/${id}`;
     try {
       await deleteDoc(doc(db, 'categories', id));
-      localStorage.removeItem('categories');
+      safeRemoveItem('categories');
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, path);
     }
@@ -190,7 +191,7 @@ export const adminService = {
       const snapshot = await getDocs(collection(db, path));
       const deletePromises = snapshot.docs.map(docSnap => deleteDoc(doc(db, path, docSnap.id)));
       await Promise.all(deletePromises);
-      localStorage.removeItem('categories');
+      safeRemoveItem('categories');
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, path);
@@ -201,7 +202,7 @@ export const adminService = {
   // Orders
   async getOrders() {
     if (checkFirestoreDisabled()) {
-        const cached = localStorage.getItem('orders');
+        const cached = safeGetItem('orders');
         return cached ? JSON.parse(cached) : [];
     }
     const path = 'orders';
@@ -209,7 +210,7 @@ export const adminService = {
       const q = query(collection(db, path), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      localStorage.setItem('orders', JSON.stringify(data));
+      safeSetItem('orders', JSON.stringify(data));
       return data;
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, path);
@@ -257,7 +258,7 @@ export const adminService = {
 
   async getUsers() {
     if (checkFirestoreDisabled()) {
-        const cached = localStorage.getItem('users');
+        const cached = safeGetItem('users');
         return cached ? JSON.parse(cached) : [];
     }
     const path = 'users';
@@ -265,7 +266,7 @@ export const adminService = {
       const q = query(collection(db, path), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AppUser));
-      localStorage.setItem('users', JSON.stringify(data));
+      safeSetItem('users', JSON.stringify(data));
       return data;
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, path);
@@ -309,7 +310,7 @@ export const adminService = {
   // Manual Invoices
   async getManualInvoices() {
     if (checkFirestoreDisabled()) {
-        const cached = localStorage.getItem('manualInvoices');
+        const cached = safeGetItem('manualInvoices');
         return cached ? JSON.parse(cached) : [];
     }
     const path = 'manualInvoices';
@@ -317,7 +318,7 @@ export const adminService = {
       const q = query(collection(db, path), orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ManualInvoice));
-      localStorage.setItem('manualInvoices', JSON.stringify(data));
+      safeSetItem('manualInvoices', JSON.stringify(data));
       return data;
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, path);
@@ -359,7 +360,7 @@ export const adminService = {
 
   // Sliders
   async getSliders() {
-    const cached = localStorage.getItem('sliders');
+    const cached = safeGetItem('sliders');
     if (cached) return JSON.parse(cached) as any[];
 
     const path = 'sliders';
@@ -367,7 +368,7 @@ export const adminService = {
       const q = query(collection(db, path), orderBy('order', 'asc'));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      localStorage.setItem('sliders', JSON.stringify(data));
+      safeSetItem('sliders', JSON.stringify(data));
       return data;
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, path);
@@ -381,7 +382,7 @@ export const adminService = {
         ...slider,
         createdAt: serverTimestamp(),
       });
-      localStorage.removeItem('sliders');
+      safeRemoveItem('sliders');
       return docRef.id;
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, path);
@@ -395,7 +396,7 @@ export const adminService = {
         ...slider,
         updatedAt: serverTimestamp(),
       });
-      localStorage.removeItem('sliders');
+      safeRemoveItem('sliders');
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, path);
     }
@@ -403,18 +404,18 @@ export const adminService = {
 
   async deleteSlider(id: string) {
     if (checkFirestoreDisabled()) {
-      const cached = localStorage.getItem('sliders');
+      const cached = safeGetItem('sliders');
       if (cached) {
         const sliders = JSON.parse(cached);
         const filtered = sliders.filter((s: any) => s.id !== id);
-        localStorage.setItem('sliders', JSON.stringify(filtered));
+        safeSetItem('sliders', JSON.stringify(filtered));
       }
       return;
     }
     const path = `sliders/${id}`;
     try {
       await deleteDoc(doc(db, 'sliders', id));
-      localStorage.removeItem('sliders');
+      safeRemoveItem('sliders');
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, path);
     }
@@ -422,7 +423,7 @@ export const adminService = {
 
   // Producers
   async getProducers() {
-    const cached = localStorage.getItem('producers');
+    const cached = safeGetItem('producers');
     if (cached) return JSON.parse(cached) as any[];
 
     const path = 'producers';
@@ -430,7 +431,7 @@ export const adminService = {
       const q = query(collection(db, path), orderBy('order', 'asc'));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      localStorage.setItem('producers', JSON.stringify(data));
+      safeSetItem('producers', JSON.stringify(data));
       return data;
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, path);
@@ -466,7 +467,7 @@ export const adminService = {
     const path = `producers/${id}`;
     try {
       await deleteDoc(doc(db, 'producers', id));
-      localStorage.removeItem('producers');
+      safeRemoveItem('producers');
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, path);
     }
@@ -474,7 +475,7 @@ export const adminService = {
 
   // Press / News Coverages
   async getPress() {
-    const cached = localStorage.getItem('press');
+    const cached = safeGetItem('press');
     if (cached) return JSON.parse(cached) as any[];
 
     const path = 'press';
@@ -482,7 +483,7 @@ export const adminService = {
       const q = query(collection(db, path), orderBy('order', 'asc'));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-      localStorage.setItem('press', JSON.stringify(data));
+      safeSetItem('press', JSON.stringify(data));
       return data;
     } catch (e) {
       handleFirestoreError(e, OperationType.LIST, path);
@@ -496,7 +497,7 @@ export const adminService = {
         ...press,
         createdAt: serverTimestamp(),
       });
-      localStorage.removeItem('press');
+      safeRemoveItem('press');
       return docRef.id;
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, path);
@@ -510,7 +511,7 @@ export const adminService = {
         ...press,
         updatedAt: serverTimestamp(),
       });
-      localStorage.removeItem('press');
+      safeRemoveItem('press');
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, path);
     }
@@ -520,7 +521,7 @@ export const adminService = {
     const path = `press/${id}`;
     try {
       await deleteDoc(doc(db, 'press', id));
-      localStorage.removeItem('press');
+      safeRemoveItem('press');
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, path);
     }
@@ -534,10 +535,10 @@ export const adminService = {
       if (snap.exists()) {
         const data = snap.data() as { logoUrl?: string; footerLogoUrl?: string };
         if (data && data.logoUrl) {
-          localStorage.setItem('siteLogo', data.logoUrl);
+          safeSetItem('siteLogo', data.logoUrl);
         }
         if (data && data.footerLogoUrl) {
-          localStorage.setItem('siteFooterLogo', data.footerLogoUrl);
+          safeSetItem('siteFooterLogo', data.footerLogoUrl);
         }
         return data;
       }
@@ -558,11 +559,11 @@ export const adminService = {
       }, { merge: true });
       
       if (settings.logoUrl) {
-        localStorage.setItem('siteLogo', settings.logoUrl);
+        safeSetItem('siteLogo', settings.logoUrl);
         window.dispatchEvent(new Event('siteLogoUpdated'));
       }
       if (settings.footerLogoUrl) {
-        localStorage.setItem('siteFooterLogo', settings.footerLogoUrl);
+        safeSetItem('siteFooterLogo', settings.footerLogoUrl);
         window.dispatchEvent(new Event('siteFooterLogoUpdated'));
       }
     } catch (e) {

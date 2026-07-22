@@ -10,6 +10,7 @@ import { storeService } from '../services/storeService';
 import { Product, Category } from '../types';
 import { AuthenticityCard } from '../components/AuthenticityCard';
 import { WishlistButton } from '../components/WishlistButton';
+import { safeSetItem, safeGetItem } from '../lib/safeStorage';
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -91,11 +92,13 @@ export default function ProductDetail() {
 
   useEffect(() => {
     if (id) {
-      const history = JSON.parse(localStorage.getItem('viewed_products') || '[]');
-      if (!history.includes(id)) {
-        const newHistory = [id, ...history].slice(0, 10);
-        localStorage.setItem('viewed_products', JSON.stringify(newHistory));
-      }
+      try {
+        const history = JSON.parse(safeGetItem('viewed_products') || '[]');
+        if (!history.includes(id)) {
+          const newHistory = [id, ...history].slice(0, 10);
+          safeSetItem('viewed_products', JSON.stringify(newHistory));
+        }
+      } catch (e) {}
     }
   }, [id]);
 

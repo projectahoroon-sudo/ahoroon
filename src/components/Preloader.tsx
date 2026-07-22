@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { adminService } from '../services/adminService';
+import { safeSetItem } from '../lib/safeStorage';
 
 interface PreloaderProps {
   onComplete: () => void;
@@ -19,10 +20,10 @@ export const Preloader = ({ onComplete }: PreloaderProps) => {
         if (settings) {
           if (settings.footerLogoUrl) {
             setLogoUrl(settings.footerLogoUrl);
-            localStorage.setItem('siteFooterLogo', settings.footerLogoUrl);
+            safeSetItem('siteFooterLogo', settings.footerLogoUrl);
           } else if (settings.logoUrl) {
             setLogoUrl(settings.logoUrl);
-            localStorage.setItem('siteLogo', settings.logoUrl);
+            safeSetItem('siteLogo', settings.logoUrl);
           }
         }
       })

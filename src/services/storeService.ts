@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { Product, Category } from '../types';
+import { safeSetItem, safeGetItem } from '../lib/safeStorage';
 
 enum OperationType {
   CREATE = 'create',
@@ -25,7 +26,7 @@ enum OperationType {
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errorMessage = error instanceof Error ? error.message : String(error);
   if (errorMessage.includes('resource-exhausted') || errorMessage.includes('Quota limit exceeded')) {
-    localStorage.setItem('firestoreDisabled', 'true');
+    safeSetItem('firestoreDisabled', 'true');
   }
   const errInfo = {
     error: errorMessage,
@@ -43,17 +44,17 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 }
 
 function checkFirestoreDisabled() {
-  return localStorage.getItem('firestoreDisabled') === 'true';
+  return safeGetItem('firestoreDisabled') === 'true';
 }
 
 export const storeService = {
   async getProducts(categoryId?: string) {
     if (checkFirestoreDisabled()) {
-      const cached = localStorage.getItem(`products_${categoryId || 'all'}`);
+      const cached = safeGetItem(`products_${categoryId || 'all'}`);
       return cached ? JSON.parse(cached) : [];
     }
     const cacheKey = `products_${categoryId || 'all'}`;
-    const cached = localStorage.getItem(cacheKey);
+    const cached = safeGetItem(cacheKey);
     if (cached) return JSON.parse(cached) as Product[];
 
     const productsRef = collection(db, 'products');
@@ -65,16 +66,16 @@ export const storeService = {
     
     const snapshot = await getDocs(q);
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-    localStorage.setItem(cacheKey, JSON.stringify(data));
+    safeSetItem(cacheKey, JSON.stringify(data));
     return data;
   },
 
   async getCategories() {
     if (checkFirestoreDisabled()) {
-      const cached = localStorage.getItem('categories');
+      const cached = safeGetItem('categories');
       return cached ? JSON.parse(cached) : [];
     }
-    const cached = localStorage.getItem('categories');
+    const cached = safeGetItem('categories');
     if (cached) return JSON.parse(cached) as Category[];
 
     const snapshot = await getDocs(collection(db, 'categories'));
@@ -82,7 +83,7 @@ export const storeService = {
       const { id, ...rest } = doc.data() as Category;
       return { id: doc.id, ...rest };
     });
-    localStorage.setItem('categories', JSON.stringify(data));
+    safeSetItem('categories', JSON.stringify(data));
     return data;
   },
 
@@ -100,10 +101,10 @@ export const storeService = {
 
   async getFlashSaleProducts() {
     if (checkFirestoreDisabled()) {
-      const cached = localStorage.getItem('flashSaleProducts');
+      const cached = safeGetItem('flashSaleProducts');
       return cached ? JSON.parse(cached) : [];
     }
-    const cached = localStorage.getItem('flashSaleProducts');
+    const cached = safeGetItem('flashSaleProducts');
     if (cached) return JSON.parse(cached) as Product[];
 
     const q = query(
@@ -113,7 +114,7 @@ export const storeService = {
     );
     const snapshot = await getDocs(q);
     const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-    localStorage.setItem('flashSaleProducts', JSON.stringify(data));
+    safeSetItem('flashSaleProducts', JSON.stringify(data));
     return data;
   },
 

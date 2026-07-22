@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { safeSetItem } from '../lib/safeStorage';
 import { motion, AnimatePresence } from 'motion/react';
 // @ts-ignore
 import html2pdf from 'html2pdf.js';
@@ -241,7 +242,7 @@ export default function Admin() {
         };
         setUser(customUser);
         setIsAdmin(true);
-        localStorage.setItem('customAdminUser', JSON.stringify(customUser));
+        safeSetItem('customAdminUser', JSON.stringify(customUser));
         loadData();
       } else {
         setLoginError('ইউজারনেম অথবা পাসওয়ার্ড ভুল হয়েছে।');
