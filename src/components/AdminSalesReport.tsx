@@ -106,7 +106,7 @@ export default function AdminSalesReport({
     if (customUserStr) {
       try {
         const customUser = JSON.parse(customUserStr);
-        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.role === 'super_admin' || customUser.role === 'admin') {
+        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.email === 'admin@ahoroon.com' || customUser.role === 'super_admin' || customUser.role === 'admin') {
           setCanView(true);
           setCanExport(true);
         } else {

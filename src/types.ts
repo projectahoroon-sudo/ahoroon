@@ -41,15 +41,41 @@ export interface CartItem extends Product {
   selectedColor?: string;
 }
 
+export interface InvoiceDeliveryInfo {
+  companyEmailStatus: 'sent' | 'failed' | 'pending' | 'simulated';
+  customerEmailStatus: 'sent' | 'failed' | 'not_required' | 'pending' | 'simulated';
+  companySentAt?: string | null;
+  customerSentAt?: string | null;
+  lastAttemptAt?: string;
+  lastError?: string | null;
+  invoiceNo?: string;
+}
+
 export interface Order {
   id?: string;
   items: CartItem[];
   total: number;
-  customerName: string;
-  phoneNumber: string;
-  address: string;
-  paymentMethod: 'COD';
-  status: 'pending' | 'processing' | 'delivered' | 'cancelled';
+  subtotal?: number;
+  deliveryCharge?: number;
+  discount?: number;
+  coupon?: string;
+  customer?: {
+    name: string;
+    phone: string;
+    address: string;
+    email?: string;
+  };
+  customerName?: string;
+  phoneNumber?: string;
+  address?: string;
+  paymentMethod?: string;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | string;
+  trackingCode?: string;
+  courier?: string;
+  consignmentId?: string;
+  trackingUrl?: string;
+  invoiceDelivery?: InvoiceDeliveryInfo;
+  adminEmailSent?: boolean;
   createdAt: any;
 }
 
@@ -60,7 +86,7 @@ export interface AppUser {
   password?: string;
   role: 'admin' | 'editor' | 'viewer';
   permissions: string[];
-  createdAt: any;
+  createdAt?: any;
 }
 
 export interface ManualInvoice {

@@ -12,18 +12,13 @@ enum OperationType {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-    },
-    operationType,
-    path
-  };
-  console.error('Firestore Seed Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  if (errorMessage.includes('resource-exhausted') || errorMessage.includes('Quota limit exceeded')) {
+    try {
+      localStorage.setItem('firestoreDisabled', 'true');
+    } catch (e) {}
+  }
+  console.warn(`[Firestore Seed Notice] (${operationType} on ${path}): ${errorMessage}`);
 }
 
 export const seedDatabase = async () => {

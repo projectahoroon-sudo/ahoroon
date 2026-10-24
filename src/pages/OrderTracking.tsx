@@ -32,9 +32,20 @@ export default function OrderTracking() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setOrder(docSnap.data());
+          return;
         }
       } catch (err) {
-        console.error(err);
+        console.warn("Order read notice (checking local cache):", err);
+      }
+
+      try {
+        const cachedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        const found = cachedOrders.find((o: any) => o.id === orderId);
+        if (found) {
+          setOrder(found);
+        }
+      } catch (cacheErr) {
+        console.error(cacheErr);
       } finally {
         setLoading(false);
       }

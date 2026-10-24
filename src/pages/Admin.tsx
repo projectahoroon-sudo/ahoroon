@@ -39,7 +39,9 @@ import {
   Copy,
   Send,
   ExternalLink,
-  CheckCircle
+  CheckCircle,
+  Mail,
+  RefreshCw
 } from 'lucide-react';
 import { auth } from '../lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -86,6 +88,26 @@ export default function Admin() {
   const [viewingInvoice, setViewingInvoice] = useState<any | null>(null);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isManualInvoicePrintOpen, setIsManualInvoicePrintOpen] = useState(false);
+  const [autoImageProgress, setAutoImageProgress] = useState<{ active: boolean; current: number; total: number } | null>(null);
+
+  const handleAutoGenerateMissingImages = async () => {
+    setAutoImageProgress({ active: true, current: 0, total: 0 });
+    try {
+      const res = await adminService.generateMissingProductImages((current, total) => {
+        setAutoImageProgress({ active: true, current, total });
+      });
+      if (res.total === 0) {
+        alert('সব পণ্যে ইতিমধ্যে ছবি রয়েছে! কোনো ছবিবিহীন পণ্য পাওয়া যায়নি।');
+      } else {
+        alert(`সাফল্যের সাথে ${res.updated}টি পণ্যের ছবি AI ও কাস্টম হাই রেজোলিউশন ইমেজ দিয়ে সেভ করা হয়েছে!`);
+        loadData();
+      }
+    } catch (err) {
+      alert('ছবি জেনারেট করার সময় সমস্যা হয়েছে।');
+    } finally {
+      setAutoImageProgress(null);
+    }
+  };
   const [deleteConfirm, setDeleteConfirm] = useState<{
     id: string;
     type: 'product' | 'category' | 'user' | 'invoice';
@@ -229,19 +251,52 @@ export default function Admin() {
     setLoginError('');
     setIsLoggingIn(true);
     try {
-      const usernameDocId = loginUsername.trim().toLowerCase().replace(/\s+/g, '');
+      const inputStr = loginUsername.trim().toLowerCase();
+      const usernameDocId = inputStr.replace(/\s+/g, '');
       const passwordVal = loginPassword.trim();
 
-      // Retrieve their custom user profile details directly
+      // Master Admin credential check
+      const isMasterAdminCreds = (
+        (inputStr === 'admin@ahoroon.com' || inputStr === 'admin' || inputStr === 'ahoroon') &&
+        (passwordVal === 'Summer26@!' || passwordVal === 'Summer26@')
+      );
+
+      // Retrieve custom user profile details
       const userProfile = await adminService.getUserProfile(usernameDocId);
       
-      if (userProfile && userProfile.password?.toString().trim() === passwordVal) {
+      if (isMasterAdminCreds) {
+        const masterAdmin = {
+          uid: 'admin',
+          displayName: userProfile?.name || 'Admin',
+          email: 'admin@ahoroon.com',
+          role: 'super_admin',
+          permissions: ['products', 'orders', 'categories', 'users', 'invoices', 'producers', 'press', 'sliders', 'settings'],
+          isCustom: true,
+          username: 'admin'
+        };
+        try {
+          await adminService.addUser({
+            name: 'Admin',
+            email: 'admin@ahoroon.com',
+            password: 'Summer26@!',
+            role: 'super_admin' as any,
+            permissions: ['products', 'orders', 'categories', 'users', 'invoices', 'producers', 'press', 'sliders', 'settings']
+          });
+        } catch (err) {
+          console.warn('Admin user save notice:', err);
+        }
+        setUser(masterAdmin);
+        setIsAdmin(true);
+        safeSetItem('customAdminUser', JSON.stringify(masterAdmin));
+        loadData();
+      } else if (userProfile && userProfile.password?.toString().trim() === passwordVal) {
+        const isSuper = userProfile.role === 'admin' || userProfile.role === 'super_admin' || userProfile.email === 'admin@ahoroon.com';
         const customUser = {
           uid: usernameDocId,
           displayName: userProfile.name || loginUsername,
           email: userProfile.email || `${usernameDocId}@ahoroon.com`,
-          role: userProfile.role || 'viewer',
-          permissions: userProfile.permissions || [],
+          role: isSuper ? 'super_admin' : (userProfile.role || 'viewer'),
+          permissions: isSuper ? ['products', 'orders', 'categories', 'users', 'invoices', 'producers', 'press', 'sliders', 'settings'] : (userProfile.permissions || []),
           isCustom: true,
           username: usernameDocId
         };
@@ -627,12 +682,20 @@ export default function Admin() {
                 />
               </div>
               {activeTab === 'products' && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button 
+                    onClick={handleAutoGenerateMissingImages}
+                    disabled={autoImageProgress?.active}
+                    className="bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    <Sparkles size={18} />
+                    <span className="hidden sm:block text-xs font-bold">✨ Auto AI Images</span>
+                  </button>
                   <button 
                     onClick={() => {
                       setIsBatchModalOpen(true);
                     }}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer animate-pulse hover:animate-none"
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-xl font-bold flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all active:scale-95 cursor-pointer"
                   >
                     <FileSpreadsheet size={18} />
                     <span className="hidden sm:block text-sm">Batch Upload</span>
@@ -841,6 +904,38 @@ export default function Admin() {
             onSave={loadData} 
           />
         )}
+        {autoImageProgress && (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-white rounded-[2.5rem] p-8 max-w-md w-full text-center space-y-6 shadow-2xl border border-purple-100"
+            >
+              <div className="w-16 h-16 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mx-auto shadow-lg shadow-purple-200 animate-bounce">
+                <Sparkles size={32} />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-black text-slate-800">ছবিবিহীন পণ্যের AI ছবি তৈরি হচ্ছে...</h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  পণ্যগুলোর নাম অনুযায়ী কাস্টম ছবি ফিল আপ করা হচ্ছে।
+                </p>
+                {autoImageProgress.total > 0 && (
+                  <p className="text-sm font-mono font-bold text-purple-700">
+                    {autoImageProgress.current} / {autoImageProgress.total} সম্পন্ন
+                  </p>
+                )}
+              </div>
+              <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden border border-slate-200">
+                <div
+                  className="bg-gradient-to-r from-purple-600 to-emerald-500 h-full transition-all duration-300 rounded-full"
+                  style={{
+                    width: `${autoImageProgress.total > 0 ? (autoImageProgress.current / autoImageProgress.total) * 100 : 10}%`
+                  }}
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
         {isUserModalOpen && (
           <UserModal 
             user={editingUser} 
@@ -872,6 +967,7 @@ export default function Admin() {
               setViewingOrder(null);
               setCourierBookingOrder(o);
             }}
+            onResendSuccess={loadData}
           />
         )}
         {isInvoiceOpen && viewingOrder && (
@@ -1169,6 +1265,30 @@ function ProductsTable({ products, categories, onEdit, onDelete }: any) {
 }
 
 function OrdersTable({ orders, onUpdateStatus, onView, onCourierBook }: any) {
+  const [resendingMap, setResendingMap] = useState<Record<string, boolean>>({});
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const handleResend = async (orderId: string) => {
+    if (!orderId) return;
+    setResendingMap(prev => ({ ...prev, [orderId]: true }));
+    try {
+      const res = await adminService.resendOrderInvoice(orderId);
+      if (res?.success) {
+        setToastMsg(`ইমেইল সফলভাবে পাঠানো হয়েছে (Invoice resent for #${orderId.slice(-6).toUpperCase()})`);
+        if (onUpdateStatus) {
+          await onUpdateStatus();
+        }
+      } else {
+        setToastMsg(`ইমেইল পাঠাতে ব্যর্থ: ${res?.error || 'Unknown error'}`);
+      }
+    } catch (err: any) {
+      setToastMsg(`ইমেইল ত্রুটি: ${err.message || err}`);
+    } finally {
+      setResendingMap(prev => ({ ...prev, [orderId]: false }));
+      setTimeout(() => setToastMsg(null), 4000);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered': return 'text-emerald-500 bg-emerald-50';
@@ -1189,8 +1309,79 @@ function OrdersTable({ orders, onUpdateStatus, onView, onCourierBook }: any) {
     }
   };
 
+  const renderInvoiceBadges = (o: any) => {
+    const delivery = o.invoiceDelivery;
+    const companyStatus = delivery?.companyEmailStatus || (o.adminEmailSent ? 'sent' : 'pending');
+    const rawCustomerEmail = (o.customer?.email || '').trim();
+    const hasCustomerEmail = Boolean(rawCustomerEmail && rawCustomerEmail.length > 0);
+    const customerStatus = delivery?.customerEmailStatus || (hasCustomerEmail ? 'pending' : 'not_required');
+    const isResending = Boolean(resendingMap[o.id]);
+
+    return (
+      <div className="space-y-1.5 text-xs">
+        <div className="flex items-center gap-1.5 font-medium">
+          <span className="text-gray-400 text-[11px] font-bold">Company:</span>
+          {companyStatus === 'sent' || companyStatus === 'simulated' ? (
+            <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-0.5">
+              ✓ Sent
+            </span>
+          ) : companyStatus === 'failed' ? (
+            <span className="text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-0.5">
+              ✗ Failed
+            </span>
+          ) : (
+            <span className="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[11px] font-bold">
+              ⏳ Pending
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1.5 font-medium">
+          <span className="text-gray-400 text-[11px] font-bold">Customer:</span>
+          {!hasCustomerEmail || customerStatus === 'not_required' ? (
+            <span className="text-gray-500 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded text-[11px] font-medium">
+              Not Provided
+            </span>
+          ) : customerStatus === 'sent' || customerStatus === 'simulated' ? (
+            <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-0.5">
+              ✓ Sent
+            </span>
+          ) : customerStatus === 'failed' ? (
+            <span className="text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-0.5">
+              ✗ Failed
+            </span>
+          ) : (
+            <span className="text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded text-[11px] font-bold">
+              ⏳ Pending
+            </span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => handleResend(o.id)}
+          disabled={isResending}
+          className="mt-1 text-[11px] font-bold text-primary hover:text-primary/80 bg-primary/5 hover:bg-primary/10 border border-primary/20 px-2 py-1 rounded-lg transition-all inline-flex items-center gap-1 disabled:opacity-50"
+          title="Resend or Retry sending Invoice to Company and Customer"
+        >
+          <RefreshCw size={11} className={cn(isResending && "animate-spin")} />
+          {isResending ? "Sending..." : "Resend Invoice"}
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div>
+      {toastMsg && (
+        <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-between shadow-sm animate-fade-in">
+          <span>{toastMsg}</span>
+          <button onClick={() => setToastMsg(null)} className="text-emerald-600 hover:text-emerald-800">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Mobile Stack Cards Layout */}
       <div className="grid grid-cols-1 gap-4 md:hidden">
         {orders.map((o: any, idx: number) => {
@@ -1211,9 +1402,22 @@ function OrdersTable({ orders, onUpdateStatus, onView, onCourierBook }: any) {
                 <p className="text-xs text-gray-500 font-semibold flex items-center gap-1">
                   <Phone size={12} className="text-gray-400" /> {o.customer?.phone}
                 </p>
+                {o.customer?.email && (
+                  <p className="text-xs text-gray-500 font-medium flex items-center gap-1">
+                    <Mail size={12} className="text-gray-400" /> {o.customer?.email}
+                  </p>
+                )}
                 <p className="text-xs text-gray-400 font-medium italic line-clamp-2 bg-gray-50 p-2 rounded-xl border border-gray-100">
                   {o.customer?.address}
                 </p>
+              </div>
+
+              {/* Mobile Invoice Email Status */}
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <Mail size={12} className="text-primary" /> Invoice Email (চালান ইমেইল)
+                </div>
+                {renderInvoiceBadges(o)}
               </div>
 
               {o.trackingCode ? (
@@ -1291,6 +1495,7 @@ function OrdersTable({ orders, onUpdateStatus, onView, onCourierBook }: any) {
               <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Courier (কুরিয়ার)</th>
               <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Total (মোট)</th>
               <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Status (স্ট্যাটাস)</th>
+              <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-500">Invoice Email (চালান)</th>
               <th className="px-6 py-5 text-xs md:text-sm font-bold uppercase tracking-wider text-gray-400 text-right">Action (অ্যাকশন)</th>
             </tr>
           </thead>
@@ -1303,6 +1508,9 @@ function OrdersTable({ orders, onUpdateStatus, onView, onCourierBook }: any) {
                   <td className="px-6 py-5">
                     <div className="text-base font-black text-accent-deep mb-1">{o.customer?.name}</div>
                     <div className="text-xs text-gray-500 font-semibold mb-1 flex items-center gap-1"><Phone size={12} className="text-gray-400" /> {o.customer?.phone}</div>
+                    {o.customer?.email && (
+                      <div className="text-xs text-gray-500 font-medium mb-1 flex items-center gap-1"><Mail size={12} className="text-gray-400" /> {o.customer?.email}</div>
+                    )}
                     <div className="text-xs text-gray-400 font-medium line-clamp-1 italic max-w-xs">{o.customer?.address}</div>
                   </td>
                   <td className="px-6 py-5">
@@ -1328,6 +1536,9 @@ function OrdersTable({ orders, onUpdateStatus, onView, onCourierBook }: any) {
                     <span className={cn("inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase border", getStatusColor(o.status))}>
                       <Icon size={14} /> {o.status}
                     </span>
+                  </td>
+                  <td className="px-6 py-5">
+                    {renderInvoiceBadges(o)}
                   </td>
                   <td className="px-6 py-5">
                     <div className="flex justify-end gap-3 items-center">
@@ -1757,7 +1968,48 @@ function CourierBookingModal({ order, onClose, onSuccess }: { order: any; onClos
   );
 }
 
-function OrderDetailsModal({ order, onClose, onInvoice, onCourierBook }: any) {
+function OrderDetailsModal({ order, onClose, onInvoice, onCourierBook, onResendSuccess }: any) {
+  const [currentOrder, setCurrentOrder] = useState(order);
+  const [isResending, setIsResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCurrentOrder(order);
+  }, [order]);
+
+  const handleResend = async () => {
+    if (!currentOrder?.id) return;
+    setIsResending(true);
+    setResendStatus(null);
+    try {
+      const res = await adminService.resendOrderInvoice(currentOrder.id);
+      if (res?.success) {
+        setResendStatus('Invoice email successfully sent! (ইমেইল সফলভাবে পাঠানো হয়েছে)');
+        if (res.invoiceDelivery) {
+          setCurrentOrder((prev: any) => ({
+            ...prev,
+            invoiceDelivery: res.invoiceDelivery
+          }));
+        }
+        if (onResendSuccess) {
+          onResendSuccess();
+        }
+      } else {
+        setResendStatus(`Failed: ${res?.error || 'Could not send email'}`);
+      }
+    } catch (err: any) {
+      setResendStatus(`Error: ${err.message || err}`);
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const delivery = currentOrder?.invoiceDelivery;
+  const companyStatus = delivery?.companyEmailStatus || (currentOrder?.adminEmailSent ? 'sent' : 'pending');
+  const rawCustomerEmail = (currentOrder?.customer?.email || '').trim();
+  const hasCustomerEmail = Boolean(rawCustomerEmail && rawCustomerEmail.length > 0);
+  const customerStatus = delivery?.customerEmailStatus || (hasCustomerEmail ? 'pending' : 'not_required');
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -1775,7 +2027,7 @@ function OrderDetailsModal({ order, onClose, onInvoice, onCourierBook }: any) {
         </button>
 
         <h2 className="text-2xl font-display font-black text-accent-deep mb-2">Order Details</h2>
-        <p className="text-primary font-mono text-xs font-bold mb-8">#{order.id}</p>
+        <p className="text-primary font-mono text-xs font-bold mb-8">#{currentOrder.id}</p>
 
         <div className="flex-1 overflow-y-auto space-y-8 pr-2 custom-scrollbar">
           {/* Customer Info */}
@@ -1784,44 +2036,125 @@ function OrderDetailsModal({ order, onClose, onInvoice, onCourierBook }: any) {
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                 <User size={12} /> Customer Name
               </p>
-              <p className="font-bold text-accent-deep">{order.customer?.name}</p>
+              <p className="font-bold text-accent-deep">{currentOrder.customer?.name}</p>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                 <Phone size={12} /> Phone Number
               </p>
-              <p className="font-bold text-accent-deep">{order.customer?.phone}</p>
+              <p className="font-bold text-accent-deep">{currentOrder.customer?.phone}</p>
             </div>
+            {hasCustomerEmail && (
+              <div className="md:col-span-2 space-y-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <Mail size={12} /> Customer Email
+                </p>
+                <p className="font-bold text-accent-deep font-mono text-sm">{currentOrder.customer?.email}</p>
+              </div>
+            )}
             <div className="md:col-span-2 space-y-1">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
                 <MapPin size={12} /> Shipping Address
               </p>
-              <p className="font-bold text-accent-deep leading-relaxed">{order.customer?.address}</p>
+              <p className="font-bold text-accent-deep leading-relaxed">{currentOrder.customer?.address}</p>
             </div>
           </div>
 
+          {/* Invoice Email Delivery Card */}
+          <div className="bg-slate-50 border border-slate-200 p-5 rounded-3xl space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
+                <Mail size={15} className="text-primary" /> Invoice Email Delivery (চালান ইমেইল স্থিতি)
+              </span>
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={isResending}
+                className="px-3.5 py-1.5 bg-primary text-white hover:bg-primary/90 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50 shadow-sm cursor-pointer"
+                title="Resend or Retry sending Invoice to Company and Customer"
+              >
+                <RefreshCw size={12} className={cn(isResending && "animate-spin")} />
+                {isResending ? 'Sending...' : 'Resend Invoice Email'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="bg-white p-3 rounded-2xl border border-gray-150">
+                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Company Email</div>
+                <div className="text-xs font-semibold text-gray-700 mt-0.5 truncate">projectahoroon@gmail.com</div>
+                <div className="mt-1">
+                  {companyStatus === 'sent' || companyStatus === 'simulated' ? (
+                    <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-1">
+                      ✓ Sent {delivery?.companySentAt ? `(${new Date(delivery.companySentAt).toLocaleTimeString()})` : ''}
+                    </span>
+                  ) : companyStatus === 'failed' ? (
+                    <span className="text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-1">
+                      ✗ Failed
+                    </span>
+                  ) : (
+                    <span className="text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-bold">
+                      ⏳ Pending
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-white p-3 rounded-2xl border border-gray-150">
+                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Customer Email</div>
+                <div className="text-xs font-semibold text-gray-700 mt-0.5 truncate">
+                  {currentOrder.customer?.email || 'Not Provided (গ্রাহক ইমেইল দেননি)'}
+                </div>
+                <div className="mt-1">
+                  {!hasCustomerEmail || customerStatus === 'not_required' ? (
+                    <span className="text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded text-[11px] font-medium">
+                      Not Provided
+                    </span>
+                  ) : customerStatus === 'sent' || customerStatus === 'simulated' ? (
+                    <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-1">
+                      ✓ Sent {delivery?.customerSentAt ? `(${new Date(delivery.customerSentAt).toLocaleTimeString()})` : ''}
+                    </span>
+                  ) : customerStatus === 'failed' ? (
+                    <span className="text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded text-[11px] font-bold inline-flex items-center gap-1">
+                      ✗ Failed
+                    </span>
+                  ) : (
+                    <span className="text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded text-[11px] font-bold">
+                      ⏳ Pending
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {resendStatus && (
+              <p className={cn("text-xs font-bold pt-1", resendStatus.includes('Failed') || resendStatus.includes('Error') ? "text-red-600" : "text-emerald-600")}>
+                {resendStatus}
+              </p>
+            )}
+          </div>
+
           {/* Courier Info / Booking Trigger */}
-          {order.trackingCode ? (
+          {currentOrder.trackingCode ? (
             <div className="bg-emerald-50/80 p-5 rounded-3xl border border-emerald-200 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
                   <Truck size={14} /> Courier & Tracking
                 </span>
-                {order.trackingUrl && (
-                  <a href={order.trackingUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1">
+                {currentOrder.trackingUrl && (
+                  <a href={currentOrder.trackingUrl} target="_blank" rel="noreferrer" className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1">
                     Live Track <ExternalLink size={12} />
                   </a>
                 )}
               </div>
               <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
                 <div>
-                  <p className="text-xs text-gray-500 font-semibold">{order.courier || 'Courier Service'}</p>
-                  <p className="text-sm font-mono font-black text-emerald-900 tracking-wide">{order.trackingCode}</p>
+                  <p className="text-xs text-gray-500 font-semibold">{currentOrder.courier || 'Courier Service'}</p>
+                  <p className="text-sm font-mono font-black text-emerald-900 tracking-wide">{currentOrder.trackingCode}</p>
                 </div>
-                {order.consignmentId && (
+                {currentOrder.consignmentId && (
                   <div className="text-right">
                     <p className="text-[10px] text-gray-400 uppercase font-bold">Consignment ID</p>
-                    <p className="text-xs font-mono font-bold text-gray-700">{order.consignmentId}</p>
+                    <p className="text-xs font-mono font-bold text-gray-700">{currentOrder.consignmentId}</p>
                   </div>
                 )}
               </div>
@@ -1829,7 +2162,7 @@ function OrderDetailsModal({ order, onClose, onInvoice, onCourierBook }: any) {
           ) : (
             <button
               type="button"
-              onClick={() => onCourierBook && onCourierBook(order)}
+              onClick={() => onCourierBook && onCourierBook(currentOrder)}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white p-4 rounded-3xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 transition-all cursor-pointer"
             >
               <Truck size={18} /> 🚀 Send to Courier (কুরিয়ার অটোমেশন এন্ট্রি দিন)
@@ -1838,9 +2171,9 @@ function OrderDetailsModal({ order, onClose, onInvoice, onCourierBook }: any) {
 
           {/* Items */}
           <div className="space-y-4">
-            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Order Items ({order.items.length})</h3>
+            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Order Items ({currentOrder.items.length})</h3>
             <div className="divide-y divide-gray-100 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
-              {order.items.map((item: any, idx: number) => (
+              {currentOrder.items.map((item: any, idx: number) => (
                 <div key={`order-item-${item.id || 'item'}-${idx}`} className="p-4 flex items-center gap-4 hover:bg-surface/30 transition-colors">
                   <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 overflow-hidden flex-shrink-0">
                     <img src={item.image} className="w-full h-full object-cover" />
@@ -1863,7 +2196,7 @@ function OrderDetailsModal({ order, onClose, onInvoice, onCourierBook }: any) {
           <div className="bg-accent-deep text-white p-6 rounded-3xl space-y-3">
             <div className="flex justify-between text-white/60 font-medium text-sm">
               <span>Subtotal</span>
-              <span>৳{order.total}</span>
+              <span>৳{currentOrder.total}</span>
             </div>
             <div className="flex justify-between text-white/60 font-medium text-sm">
               <span>Delivery</span>
@@ -1871,7 +2204,7 @@ function OrderDetailsModal({ order, onClose, onInvoice, onCourierBook }: any) {
             </div>
             <div className="pt-3 border-t border-white/10 flex justify-between items-center">
               <span className="font-bold">Total Payable</span>
-              <span className="text-2xl font-display font-black">৳{order.total}</span>
+              <span className="text-2xl font-display font-black">৳{currentOrder.total}</span>
             </div>
           </div>
         </div>

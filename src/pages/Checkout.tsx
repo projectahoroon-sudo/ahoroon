@@ -78,7 +78,21 @@ export default function Checkout() {
         createdAt: serverTimestamp(),
       };
 
-      const docRef = await addDoc(collection(db, 'orders'), orderData);
+      let orderId = '';
+      try {
+        const docRef = await addDoc(collection(db, 'orders'), orderData);
+        orderId = docRef.id;
+      } catch (dbErr) {
+        console.warn("Firestore order write notice (using fallback order record):", dbErr);
+        orderId = 'ord_' + Date.now();
+        const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+        existingOrders.unshift({
+          id: orderId,
+          ...orderData,
+          createdAt: new Date().toISOString()
+        });
+        localStorage.setItem('orders', JSON.stringify(existingOrders));
+      }
 
       // Trigger automatic order notification email immediately on backend
       try {
@@ -88,7 +102,8 @@ export default function Checkout() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            orderId: docRef.id,
+            orderId,
+            orderData,
           }),
         });
         const notifyResult = await notifyResponse.json();
@@ -131,20 +146,28 @@ export default function Checkout() {
       }
       
       // Add to public activity for Social Proof
-      await addDoc(collection(db, 'public_activity'), {
-        userName: formData.name.split(' ')[0], // Only first name for privacy
-        productName: cart[0].name,
-        type: 'purchase',
-        createdAt: serverTimestamp()
-      });
+      try {
+        await addDoc(collection(db, 'public_activity'), {
+          userName: formData.name.split(' ')[0], // Only first name for privacy
+          productName: cart[0].name,
+          type: 'purchase',
+          createdAt: serverTimestamp()
+        });
+      } catch (pubErr) {
+        // Non-fatal if offline/quota
+      }
       
       // Add loyalty points (1 point for every ৳100)
       if (auth.currentUser) {
-        await addPoints(Math.floor(total / 100));
+        try {
+          await addPoints(Math.floor(total / 100));
+        } catch (pointErr) {
+          // Non-fatal if offline/quota
+        }
       }
 
       clearCart();
-      navigate(`/order-tracking/${docRef.id}`);
+      navigate(`/order-tracking/${orderId}`);
     } catch (err) {
       console.error(err);
       alert('Something went wrong. Please try again.');
