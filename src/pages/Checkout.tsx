@@ -14,6 +14,7 @@ export default function Checkout() {
   const { loyalty, addPoints } = useLoyalty();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -62,6 +63,12 @@ export default function Checkout() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim()) {
+      setFormError('অনুগ্রহ করে আপনার নাম, ফোন নম্বর এবং ডেলিভারি ঠিকানা পূরণ করুন।');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -69,10 +76,10 @@ export default function Checkout() {
         items: cart,
         total,
         customer: {
-          name: formData.name,
-          phone: formData.phone,
-          address: formData.address,
-          email: formData.email,
+          name: formData.name.trim(),
+          phone: formData.phone.trim(),
+          address: formData.address.trim(),
+          email: formData.email.trim(),
         },
         userId: auth.currentUser?.uid || 'guest',
         status: 'pending',
@@ -81,7 +88,7 @@ export default function Checkout() {
 
       const docRef = await addDoc(collection(db, 'orders'), orderData);
 
-      // Trigger automatic order notification email immediately on backend
+      // Trigger automatic order notification email immediately on backend (with keepalive + retry)
       try {
         const gmailToken = getGmailAccessToken();
         const headers: Record<string, string> = {
@@ -91,17 +98,25 @@ export default function Checkout() {
           headers['Authorization'] = `Bearer ${gmailToken}`;
         }
 
-        const notifyResponse = await fetch('/api/orders/notify', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            orderId: docRef.id,
-          }),
-        });
-        const notifyResult = await notifyResponse.json();
-        if (notifyResult.success) {
-          console.log(`[EMAIL_TRIGGER] Order notification successfully completed. Email sent: ${notifyResult.emailSent}. Gmail API: ${!!notifyResult.gmail}`);
-        } else {
+        const triggerNotify = () =>
+          fetch('/api/orders/notify', {
+            method: 'POST',
+            headers,
+            keepalive: true,
+            body: JSON.stringify({
+              orderId: docRef.id,
+            }),
+          });
+
+        let notifyResponse = await triggerNotify();
+        if (!notifyResponse.ok) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          notifyResponse = await triggerNotify();
+        }
+        const notifyResult = await notifyResponse.json().catch(() => null);
+        if (notifyResult?.success) {
+          console.log(`[EMAIL_TRIGGER] Order notification completed. Email sent: ${notifyResult.emailSent}.`);
+        } else if (notifyResult?.error) {
           console.error("[EMAIL_TRIGGER_ERROR] Backend notified error:", notifyResult.error);
         }
       } catch (notifyErr) {
@@ -300,6 +315,12 @@ export default function Checkout() {
               ) : (
                 <div className="bg-gray-50 p-4 rounded-2xl text-center">
                   <p className="text-xs font-bold text-gray-500">Login to earn reward points!</p>
+                </div>
+              )}
+
+              {formError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold">
+                  {formError}
                 </div>
               )}
 

@@ -7,7 +7,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import nodemailer from "nodemailer";
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, getDoc, updateDoc, addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, addDoc, collection, serverTimestamp, onSnapshot, query, orderBy, limit } from "firebase/firestore";
 
 async function startServer() {
   const app = express();
@@ -186,25 +186,30 @@ Return ONLY a JSON array of the 4 recommended product IDs.`;
       .replace(/'/g, '&#39;');
   }
 
-  // Automatic Order Notification Email Endpoint
-  app.post("/api/orders/notify", async (req, res) => {
+  // Deduplication lock for concurrent /api/orders/notify and Firestore watcher triggers
+  const processingOrders = new Set<string>();
+
+  async function dispatchOrderNotificationEmail(orderId: string, gmailToken?: string): Promise<any> {
+    if (!orderId || typeof orderId !== 'string' || !orderId.trim() || orderId.length > 128) {
+      return { status: 400, error: "Valid orderId is required" };
+    }
+    if (!db) {
+      console.warn("[DB_NOT_READY] Firestore is not initialized on the backend.");
+      return { status: 500, error: "Firestore is not initialized on the backend." };
+    }
+    if (processingOrders.has(orderId)) {
+      console.log(`[IN_FLIGHT_PREVENTED] Order ${orderId} notification already in progress.`);
+      return { status: 200, success: true, message: "Notification already in progress." };
+    }
+
+    processingOrders.add(orderId);
     try {
-      const { orderId } = req.body;
-      if (!orderId) {
-        return res.status(400).json({ error: "orderId is required" });
-      }
-
-      if (!db) {
-        console.warn("[DB_NOT_READY] Firestore is not initialized on the backend. Attempting to skip database checks.");
-        return res.status(500).json({ error: "Firestore is not initialized on the backend." });
-      }
-
       console.log(`[ORDER_NOTIFICATION] Processing order: ${orderId}`);
 
       const orderRef = doc(db, 'orders', orderId);
       const orderSnap = await getDoc(orderRef);
       if (!orderSnap.exists()) {
-        return res.status(404).json({ error: `Order ${orderId} not found in database.` });
+        return { status: 404, error: `Order ${orderId} not found in database.` };
       }
 
       const orderData = orderSnap.data();
@@ -212,7 +217,7 @@ Return ONLY a JSON array of the 4 recommended product IDs.`;
       // Prevent duplicate notification emails
       if (orderData.adminEmailSent) {
         console.log(`[DUPLICATE_PREVENTED] Email already dispatched previously for order ${orderId}.`);
-        return res.json({ success: true, message: "Duplicate notification ignored." });
+        return { status: 200, success: true, message: "Duplicate notification ignored." };
       }
 
       // Fetch custom company logo from settings if available
@@ -637,9 +642,7 @@ Return ONLY a JSON array of the 4 recommended product IDs.`;
       const subject = `🛒 New Order Received - Order #${orderId}`;
 
       // 1. Direct Gmail API Delivery if Bearer Token is passed
-      const authHeader = req.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        const gmailToken = authHeader.substring(7);
+      if (gmailToken) {
         try {
           console.log(`[GMAIL_DISPATCH] Dispatching order email via Gmail API to ${adminOrderEmail}...`);
           const rfc2822 = [
@@ -674,7 +677,7 @@ Return ONLY a JSON array of the 4 recommended product IDs.`;
             const data = await gmailRes.json();
             await updateDoc(orderRef, { adminEmailSent: true });
             console.log(`[GMAIL_SUCCESS] Order notification inserted into Gmail Inbox. ID: ${data.id}`);
-            return res.json({ success: true, emailSent: true, gmail: true, messageId: data.id });
+            return { status: 200, success: true, emailSent: true, gmail: true, messageId: data.id };
           } else {
             console.warn('[GMAIL_WARN] Gmail API returned status:', gmailRes.status);
           }
@@ -693,12 +696,13 @@ Return ONLY a JSON array of the 4 recommended product IDs.`;
         console.log(`TOTAL PAYABLE: ৳${grandTotal.toLocaleString()}`);
         console.log("------------------ SIMULATED EMAIL CONTENT END ------------------");
 
-        return res.json({ 
+        return { 
+          status: 200,
           success: true, 
           emailSent: false, 
           simulated: true,
           message: "Order received. Configure SMTP_USER and SMTP_PASS in server environment to deliver real emails to inbox." 
-        });
+        };
       }
 
       // Nodemailer setup
@@ -728,13 +732,52 @@ Return ONLY a JSON array of the 4 recommended product IDs.`;
 
       await updateDoc(orderRef, { adminEmailSent: true });
       console.log(`[EMAIL_SUCCESS] Email sent successfully. MessageID: ${info.messageId}`);
-      res.json({ success: true, emailSent: true, messageId: info.messageId });
+      return { status: 200, success: true, emailSent: true, messageId: info.messageId };
 
     } catch (error: any) {
       console.error("[EMAIL_FAILURE] Failed to dispatch order notification email:", error);
       // Resilience fallback: always return success: true to the client so checkout does not fail
-      res.json({ success: true, emailSent: false, error: error.message || error });
+      return { status: 200, success: true, emailSent: false, error: error.message || error };
+    } finally {
+      processingOrders.delete(orderId);
     }
+  }
+
+  // Real-time Firestore backup watcher for newly placed orders
+  if (db) {
+    let isInitialOrderSnapshot = true;
+    const recentOrdersQuery = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(10));
+    onSnapshot(recentOrdersQuery, (snapshot) => {
+      if (isInitialOrderSnapshot) {
+        isInitialOrderSnapshot = false;
+        return;
+      }
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          if (!data.adminEmailSent) {
+            const newOrderId = change.doc.id;
+            setTimeout(() => {
+              dispatchOrderNotificationEmail(newOrderId).catch((err) => {
+                console.error(`[ORDER_WATCHER_ERROR] Failed auto-dispatch for ${newOrderId}:`, err);
+              });
+            }, 2500);
+          }
+        }
+      });
+    }, (err) => {
+      console.warn('[ORDER_WATCHER_WARN] Firestore orders listener error:', err);
+    });
+  }
+
+  // Automatic Order Notification Email Endpoint
+  app.post("/api/orders/notify", async (req, res) => {
+    const { orderId } = req.body || {};
+    const authHeader = req.headers.authorization;
+    const gmailToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : undefined;
+    const result = await dispatchOrderNotificationEmail(orderId, gmailToken);
+    const { status = 200, ...body } = result;
+    return res.status(status).json(body);
   });
 
   // Safe Server Email Configuration Status Endpoint (never exposes secrets)
