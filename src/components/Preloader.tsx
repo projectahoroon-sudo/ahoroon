@@ -14,10 +14,6 @@ export const Preloader = ({ onComplete }: PreloaderProps) => {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem('hasSeenPreloader', 'true');
-    } catch (e) {}
-
     // 1. Instantly attempt to load footer logo from firebase settings if not cached or to verify freshness
     adminService.getSettings()
       .then(settings => {
@@ -33,9 +29,9 @@ export const Preloader = ({ onComplete }: PreloaderProps) => {
       })
       .catch(err => console.error("Error loading logo in Preloader:", err));
 
-    // 2. Animate progress bar incrementally over 350ms for instant loading
-    const duration = 350; // 350ms
-    const intervalMs = 20;
+    // 2. Animate progress bar incrementally over 1.8 seconds
+    const duration = 1800; // 1.8 seconds
+    const intervalMs = 25;
     const totalSteps = duration / intervalMs;
     let currentStep = 0;
 
@@ -46,9 +42,10 @@ export const Preloader = ({ onComplete }: PreloaderProps) => {
 
       if (currentStep >= totalSteps) {
         clearInterval(timer);
+        // Add a slight delay at 100% for an organic visual lock-in feel before resolving
         setTimeout(() => {
           onComplete();
-        }, 100);
+        }, 300);
       }
     }, intervalMs);
 

@@ -1,10 +1,4 @@
-import { 
-  PRODUCTS as STATIC_PRODUCTS, 
-  CATEGORIES as STATIC_CATEGORIES, 
-  STATIC_SLIDERS, 
-  PRODUCERS as FALLBACK_PRODUCERS, 
-  PRESS_COVERAGES as FALLBACK_PRESS 
-} from '../data';
+import { PRODUCTS as STATIC_PRODUCTS, CATEGORIES as STATIC_CATEGORIES } from '../data';
 import { ProductCard } from '../components/ProductCard';
 import { 
   ArrowRight, 
@@ -29,65 +23,25 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useState, useEffect, useRef } from 'react';
 import { storeService } from '../services/storeService';
 import { adminService } from '../services/adminService';
-import { safeGetItem } from '../lib/safeStorage';
 import { Product, Category, SliderImage, Producer, PressCoverage } from '../types';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { RecommendedProducts } from '../components/RecommendedProducts';
 import { AharonVideoSection } from '../components/AharonVideoSection';
 import { PremiumCategoryCard } from '../components/PremiumCategoryCard';
 
+const FALLBACK_PRODUCERS: Producer[] = [];
+
+const FALLBACK_SLIDERS: SliderImage[] = [];
+
+const FALLBACK_PRESS: PressCoverage[] = [];
+
 export default function Home() {
   const location = useLocation();
-  const [products, setProducts] = useState<Product[]>(() => {
-    const cached = safeGetItem('products');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return STATIC_PRODUCTS;
-  });
-  const [categories, setCategories] = useState<Category[]>(() => {
-    const cached = safeGetItem('categories');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return STATIC_CATEGORIES;
-  });
-  const [sliders, setSliders] = useState<SliderImage[]>(() => {
-    const cached = safeGetItem('sliders');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return STATIC_SLIDERS;
-  });
-  const [producers, setProducers] = useState<Producer[]>(() => {
-    const cached = safeGetItem('producers');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return FALLBACK_PRODUCERS;
-  });
-  const [press, setPress] = useState<PressCoverage[]>(() => {
-    const cached = safeGetItem('press');
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return FALLBACK_PRESS;
-  });
+  const [products, setProducts] = useState<Product[]>(STATIC_PRODUCTS);
+  const [categories, setCategories] = useState<Category[]>(STATIC_CATEGORIES);
+  const [sliders, setSliders] = useState<SliderImage[]>(FALLBACK_SLIDERS);
+  const [producers, setProducers] = useState<Producer[]>(FALLBACK_PRODUCERS);
+  const [press, setPress] = useState<PressCoverage[]>(FALLBACK_PRESS);
   const [loading, setLoading] = useState(false);
   const [selectedPress, setSelectedPress] = useState<PressCoverage | null>(null);
   const [selectedProducer, setSelectedProducer] = useState<Producer | null>(null);

@@ -159,9 +159,26 @@
         "logoUrl": { "type": "string" }
       },
       "required": ["logoUrl"]
+    },
+    "Contact": {
+      "title": "Contact",
+      "description": "User inquiries submitted via the contact form",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "subject", "message"]
     }
   },
   "firestore": {
+    "contacts/{contactId}": {
+      "schema": "Contact",
+      "description": "Collection of contact form inquiries"
+    },
     "settings/{settingId}": {
       "schema": "Setting",
       "description": "Collection of store configuration settings"

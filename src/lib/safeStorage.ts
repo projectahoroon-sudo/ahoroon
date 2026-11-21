@@ -3,13 +3,28 @@ export function safeSetItem(key: string, value: string): void {
     localStorage.setItem(key, value);
   } catch (error) {
     console.warn(`[safeStorage] setItem failed for key "${key}":`, error);
-    // If quota exceeded, only clear non-essential transient keys
+    // If quota exceeded, attempt to clear old cache keys to free up space
     try {
-      localStorage.removeItem('viewed_products');
-      localStorage.removeItem('firestoreDisabled');
+      const cacheKeys = [
+        'orders',
+        'products',
+        'categories',
+        'users',
+        'manualInvoices',
+        'sliders',
+        'producers',
+        'press',
+        'flashSaleProducts',
+        'viewed_products'
+      ];
+      for (const k of cacheKeys) {
+        if (k !== key) {
+          localStorage.removeItem(k);
+        }
+      }
       localStorage.setItem(key, value);
     } catch (retryError) {
-      // Silently ignore if browser local storage quota is full
+      // Silently ignore if quota is strictly reached. The app will continue working with Firestore directly.
     }
   }
 }

@@ -7,6 +7,7 @@ import { useCart } from '../hooks/useCart';
 import { useLoyalty } from '../context/LoyaltyContext';
 import { auth, db } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { getGmailAccessToken } from '../lib/workspaceAuth';
 
 export default function Checkout() {
   const { cart, totalPrice: total, clearCart } = useCart();
@@ -78,37 +79,28 @@ export default function Checkout() {
         createdAt: serverTimestamp(),
       };
 
-      let orderId = '';
-      try {
-        const docRef = await addDoc(collection(db, 'orders'), orderData);
-        orderId = docRef.id;
-      } catch (dbErr) {
-        console.warn("Firestore order write notice (using fallback order record):", dbErr);
-        orderId = 'ord_' + Date.now();
-        const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-        existingOrders.unshift({
-          id: orderId,
-          ...orderData,
-          createdAt: new Date().toISOString()
-        });
-        localStorage.setItem('orders', JSON.stringify(existingOrders));
-      }
+      const docRef = await addDoc(collection(db, 'orders'), orderData);
 
       // Trigger automatic order notification email immediately on backend
       try {
+        const gmailToken = getGmailAccessToken();
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (gmailToken) {
+          headers['Authorization'] = `Bearer ${gmailToken}`;
+        }
+
         const notifyResponse = await fetch('/api/orders/notify', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
           body: JSON.stringify({
-            orderId,
-            orderData,
+            orderId: docRef.id,
           }),
         });
         const notifyResult = await notifyResponse.json();
         if (notifyResult.success) {
-          console.log(`[EMAIL_TRIGGER] Order notification successfully completed. Email sent: ${notifyResult.emailSent}. Simulated: ${!!notifyResult.simulated}`);
+          console.log(`[EMAIL_TRIGGER] Order notification successfully completed. Email sent: ${notifyResult.emailSent}. Gmail API: ${!!notifyResult.gmail}`);
         } else {
           console.error("[EMAIL_TRIGGER_ERROR] Backend notified error:", notifyResult.error);
         }
@@ -146,28 +138,20 @@ export default function Checkout() {
       }
       
       // Add to public activity for Social Proof
-      try {
-        await addDoc(collection(db, 'public_activity'), {
-          userName: formData.name.split(' ')[0], // Only first name for privacy
-          productName: cart[0].name,
-          type: 'purchase',
-          createdAt: serverTimestamp()
-        });
-      } catch (pubErr) {
-        // Non-fatal if offline/quota
-      }
+      await addDoc(collection(db, 'public_activity'), {
+        userName: formData.name.split(' ')[0], // Only first name for privacy
+        productName: cart[0].name,
+        type: 'purchase',
+        createdAt: serverTimestamp()
+      });
       
       // Add loyalty points (1 point for every ৳100)
       if (auth.currentUser) {
-        try {
-          await addPoints(Math.floor(total / 100));
-        } catch (pointErr) {
-          // Non-fatal if offline/quota
-        }
+        await addPoints(Math.floor(total / 100));
       }
 
       clearCart();
-      navigate(`/order-tracking/${orderId}`);
+      navigate(`/order-tracking/${docRef.id}`);
     } catch (err) {
       console.error(err);
       alert('Something went wrong. Please try again.');

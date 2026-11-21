@@ -11,7 +11,11 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && (
-        (request.auth.token.email_verified == true && request.auth.token.email == 'reocleanproperties@gmail.com') ||
+        (request.auth.token.email_verified == true && (
+          request.auth.token.email == 'reocleanproperties@gmail.com' ||
+          request.auth.token.email == 'ahorooon@gmail.com' ||
+          request.auth.token.email == 'projectahoroon@gmail.com'
+        )) ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -30,12 +34,36 @@ service cloud.firestore {
 
     // Products
     match /products/{productId} {
-      allow read, write: if true;
+      function isValidProduct(data) {
+        return data.get('name', '') is string && data.name.size() > 0 &&
+               data.get('price', 0) is number && 
+               data.get('category', '') is string &&
+               data.get('image', '') is string && 
+               data.get('images', []) is list &&
+               data.get('unit', '') is string &&
+               data.get('moq', 1) is number &&
+               data.get('step', 1) is number;
+      }
+
+      allow read: if true;
+      allow create: if isAdmin() && isValidProduct(incoming());
+      allow update: if isAdmin() && 
+                    isValidProduct(incoming()) && 
+                    incoming().get('createdAt', existing().get('createdAt', request.time)) == existing().get('createdAt', request.time);
+      allow delete: if isAdmin();
     }
 
     // Categories
     match /categories/{categoryId} {
-      allow read, write: if true;
+      function isValidCategory(data) {
+        return data.name is string && data.name.size() > 0 &&
+               data.icon is string;
+      }
+
+      allow read: if true;
+      allow create: if isAdmin() && isValidCategory(incoming());
+      allow update: if isAdmin() && isValidCategory(incoming());
+      allow delete: if isAdmin();
     }
 
     // Orders
@@ -60,32 +88,76 @@ service cloud.firestore {
 
     // Public Activity (for Social Proof)
     match /public_activity/{activityId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if isSignedIn() || true; // Allow system-triggered (anonymous checkout also triggers this)
     }
 
     // Customer Gallery
     match /customerGallery/{galleryId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if (isSignedIn() && existing().userId == request.auth.uid) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     // Sliders
     match /sliders/{sliderId} {
-      allow read, write: if true;
+      function isValidSlider(data) {
+        return data.get('imageUrl', '') is string && data.get('imageUrl', '').size() > 0 &&
+               data.get('title', '') is string &&
+               data.get('description', '') is string &&
+               data.get('link', '') is string &&
+               data.get('order', 0) is number;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidSlider(incoming());
+      allow update: if isAdmin() && isValidSlider(incoming());
+      allow delete: if isAdmin();
     }
 
     // Producers
     match /producers/{producerId} {
-      allow read, write: if true;
+      function isValidProducer(data) {
+        return data.get('name', '') is string && data.get('name', '').size() > 0 && data.get('name', '').size() <= 200 &&
+               data.get('role', '') is string && data.get('role', '').size() > 0 && data.get('role', '').size() <= 200 &&
+               data.get('img', '') is string && data.get('img', '').size() > 0 && data.get('img', '').size() <= 1000000 &&
+               data.get('story', '') is string && data.get('story', '').size() > 0 && data.get('story', '').size() <= 10000 &&
+               data.get('order', 0) is number;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidProducer(incoming());
+      allow update: if isAdmin() && isValidProducer(incoming());
+      allow delete: if isAdmin();
     }
 
     // Press Coverages
     match /press/{pressId} {
-      allow read, write: if true;
+      function isValidPress(data) {
+        return data.get('source', '') is string && data.get('source', '').size() > 0 && data.get('source', '').size() <= 200 &&
+               data.get('title', '') is string && data.get('title', '').size() > 0 && data.get('title', '').size() <= 400 &&
+               data.get('excerpt', '') is string && data.get('excerpt', '').size() > 0 && data.get('excerpt', '').size() <= 4000 &&
+               data.get('img', '') is string && data.get('img', '').size() > 0 && data.get('img', '').size() <= 1000000 &&
+               data.get('link', '') is string && data.get('link', '').size() <= 2000 &&
+               data.get('date', '') is string && data.get('date', '').size() <= 100 &&
+               data.get('order', 0) is number;
+      }
+      allow read: if true;
+      allow create: if isAdmin() && isValidPress(incoming());
+      allow update: if isAdmin() && isValidPress(incoming());
+      allow delete: if isAdmin();
     }
 
-    // Site Settings
+    // Site Settings (General branding is public; Courier & Email config are admin-only)
     match /settings/{settingId} {
-      allow read, write: if true;
+      allow read: if settingId == 'general' || isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Contact Form Inquiries
+    match /contacts/{contactId} {
+      allow read: if isAdmin();
+      allow create: if true;
     }
   }
 }

@@ -106,7 +106,7 @@ export default function AdminSalesReport({
     if (customUserStr) {
       try {
         const customUser = JSON.parse(customUserStr);
-        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.email === 'admin@ahoroon.com' || customUser.role === 'super_admin' || customUser.role === 'admin') {
+        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.email === 'projectahoroon@gmail.com' || customUser.role === 'super_admin' || customUser.role === 'admin') {
           setCanView(true);
           setCanExport(true);
         } else {
@@ -119,7 +119,7 @@ export default function AdminSalesReport({
       }
     } else {
       const u = auth.currentUser;
-      if (u && (u.email === 'reocleanproperties@gmail.com' || u.email === 'ahorooon@gmail.com')) {
+      if (u && (u.email === 'reocleanproperties@gmail.com' || u.email === 'ahorooon@gmail.com' || u.email === 'projectahoroon@gmail.com')) {
         setCanView(true);
         setCanExport(true);
       } else {

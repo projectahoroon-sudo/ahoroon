@@ -71,23 +71,17 @@ function AppContent() {
 }
 
 export default function App() {
-  const [isLoaded, setIsLoaded] = useState(() => {
-    try {
-      return sessionStorage.getItem('hasSeenPreloader') === 'true';
-    } catch (e) {
-      return false;
-    }
-  });
+  const [isLoaded, setIsLoaded] = useState(false);
 
   return (
     <Router>
       <ScrollToTop />
       <CartProvider>
         <LoyaltyProvider>
-          <AnimatePresence>
+          <AnimatePresence mode="wait">
             {!isLoaded && <Preloader onComplete={() => setIsLoaded(true)} />}
           </AnimatePresence>
-          <AppContent />
+          {isLoaded && <AppContent />}
         </LoyaltyProvider>
       </CartProvider>
     </Router>

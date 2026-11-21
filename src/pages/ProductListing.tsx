@@ -65,13 +65,11 @@ export default function ProductListing() {
           storeService.getProducts(categoryId),
           storeService.getCategories()
         ]);
-        setProducts(p && p.length > 0 ? p : STATIC_PRODUCTS);
-        const categoriesList = c && c.length > 0 ? c : STATIC_CATEGORIES;
-        const currentCat = categoriesList.find(cat => cat.id === categoryId);
+        setProducts(p);
+        const currentCat = c.find(cat => cat.id === categoryId);
         if (currentCat) setCategory(currentCat);
       } catch (e) {
         console.error('Error loading listing:', e);
-        setProducts(STATIC_PRODUCTS);
       } finally {
         setLoading(false);
       }

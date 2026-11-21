@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Upload, Truck, Key, CheckCircle, ExternalLink } from 'lucide-react';
+import { Save, Upload, Truck, Key, CheckCircle, ExternalLink, Mail, Send, Check, AlertCircle } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import { compressImage } from '../lib/imageUtils';
 
@@ -26,16 +26,36 @@ export default function AdminSettings() {
   });
   const [courierSavedSuccess, setCourierSavedSuccess] = useState(false);
 
+  // Email Notification Settings state (credentials are stored server-side only)
+  const [emailSettings, setEmailSettings] = useState({
+    adminEmail: 'projectahoroon@gmail.com',
+  });
+  const [emailServerStatus, setEmailServerStatus] = useState<{
+    configured: boolean;
+    smtpUser: string;
+    smtpHost: string;
+    smtpPort: number;
+  }>({
+    configured: false,
+    smtpUser: '',
+    smtpHost: 'smtp.gmail.com',
+    smtpPort: 465,
+  });
+  const [emailSavedSuccess, setEmailSavedSuccess] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; msg: string } | null>(null);
+
   useEffect(() => {
     loadSettings();
     loadCourierSettings();
+    loadEmailSettings();
     
     // Determine edit permission based on custom user role
     const customUserStr = localStorage.getItem('customAdminUser');
     if (customUserStr) {
       try {
         const customUser = JSON.parse(customUserStr);
-        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.email === 'admin@ahoroon.com' || customUser.role === 'super_admin' || customUser.role === 'admin') {
+        if (customUser.email === 'reocleanproperties@gmail.com' || customUser.email === 'ahorooon@gmail.com' || customUser.email === 'projectahoroon@gmail.com' || customUser.role === 'super_admin') {
           setCanModify(true);
         } else if (customUser.isCustom) {
           const role = customUser.role;
@@ -72,6 +92,58 @@ export default function AdminSettings() {
       }
     } catch (err) {
       console.error('Error loading courier settings:', err);
+    }
+  };
+
+  const loadEmailSettings = async () => {
+    try {
+      const [status, es] = await Promise.all([
+        adminService.getEmailStatus().catch(() => null),
+        adminService.getEmailSettings().catch(() => null),
+      ]);
+      if (status) {
+        setEmailServerStatus({
+          configured: Boolean(status.configured),
+          smtpUser: status.smtpUser || '',
+          smtpHost: status.smtpHost || 'smtp.gmail.com',
+          smtpPort: status.smtpPort || 465,
+        });
+      }
+      if (es && es.adminEmail) {
+        setEmailSettings({ adminEmail: es.adminEmail });
+      } else if (status && status.adminEmail) {
+        setEmailSettings({ adminEmail: status.adminEmail });
+      }
+    } catch (err) {
+      console.error('Error loading email settings:', err);
+    }
+  };
+
+  const handleSaveEmailSettings = async () => {
+    setSaving(true);
+    try {
+      await adminService.saveEmailSettings({ adminEmail: emailSettings.adminEmail });
+      setEmailSavedSuccess(true);
+      setTimeout(() => setEmailSavedSuccess(false), 3500);
+    } catch (e: any) {
+      alert('Failed saving email settings: ' + (e.message || e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    setTestingEmail(true);
+    setTestEmailResult(null);
+    try {
+      await adminService.testSendEmail({
+        testEmail: emailSettings.adminEmail,
+      });
+      setTestEmailResult({ success: true, msg: `টেস্ট ইমেইল সফলভাবে ${emailSettings.adminEmail}-এ পৌঁছেছে!` });
+    } catch (e: any) {
+      setTestEmailResult({ success: false, msg: `ত্রুটি: ${e.message}` });
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -432,6 +504,103 @@ export default function AdminSettings() {
               <span>
                 আপনি এপিআই কি ফাঁকা রাখলেও টেস্ট বা ডেমো মোডে ১-ক্লিকে কুরিয়ার এন্ট্রি দিতে পারবেন এবং অটোমেটিক প্রফেশনাল ট্র্যাকিং কোড জেনারেট হয়ে অর্ডারে যুক্ত হয়ে যাবে।
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Automatic Order Email Notification Section */}
+        <div className="space-y-4 pt-6 border-t border-gray-100 mt-6">
+          <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-[#005900] shadow-inner">
+                  <Mail size={24} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-accent-deep">স্বয়ংক্রিয় অর্ডার ইমেইল নোটিফিকেশন (Order Notifications)</h2>
+                  <p className="text-xs text-gray-500 font-medium">গ্রাহক অর্ডার প্লেস করার সাথে সাথে আপনার জিমেইল ইনবক্সে স্বয়ংক্রিয়ভাবে নোটিফিকেশন আসবে</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleTestEmail}
+                  disabled={testingEmail || !emailServerStatus.configured}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-2xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  <Send size={14} />
+                  <span>{testingEmail ? 'পাঠানো হচ্ছে...' : 'টেস্ট ইমেইল পাঠান'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEmailSettings}
+                  disabled={saving}
+                  className="px-5 py-2.5 bg-[#005900] hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Save size={14} />
+                  <span>{emailSavedSuccess ? 'সংরক্ষিত হয়েছে!' : 'সেটিংস সেভ করুন'}</span>
+                </button>
+              </div>
+            </div>
+
+            {testEmailResult && (
+              <div className={`p-4 rounded-2xl flex items-center gap-2 text-xs font-bold ${
+                testEmailResult.success 
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                  : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}>
+                {testEmailResult.success ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                <span>{testEmailResult.msg}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">অর্ডার নোটিফিকেশন প্রাপক (Admin Email)</label>
+                <input
+                  type="email"
+                  value={emailSettings.adminEmail}
+                  onChange={e => setEmailSettings({ ...emailSettings, adminEmail: e.target.value })}
+                  placeholder="projectahoroon@gmail.com"
+                  className="w-full bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs font-medium focus:ring-2 focus:ring-emerald-500/20"
+                />
+                <p className="text-[10px] text-gray-400">এই ইমেইলের ইনবক্সে গ্রাহকদের নতুন অর্ডারের সমস্ত তথ্য যাবে।</p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">সার্ভার SMTP স্ট্যাটাস (Server Mailer)</label>
+                <div className={`p-3 rounded-xl border text-xs font-bold flex items-center justify-between ${
+                  emailServerStatus.configured
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-amber-50 border-amber-200 text-amber-800'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <Key size={15} />
+                    <span>
+                      {emailServerStatus.configured
+                        ? `সক্রিয় (${emailServerStatus.smtpUser})`
+                        : 'সার্ভারে SMTP_PASS সেট করা নেই'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono opacity-80">
+                    {emailServerStatus.smtpHost}:{emailServerStatus.smtpPort}
+                  </span>
+                </div>
+                <p className="text-[10px] text-gray-400">নিরাপত্তার জন্য SMTP পাসওয়ার্ড শুধুমাত্র সার্ভারে সংরক্ষিত থাকে।</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-150 text-xs text-emerald-900 space-y-1.5">
+              <p className="font-bold flex items-center gap-1.5">
+                <Check size={16} className="text-emerald-700" />
+                <span>স্বয়ংক্রিয় ডেলিভারি ফিচার সক্রিয়:</span>
+              </p>
+              <ul className="list-disc list-inside space-y-1 pl-1 text-[11px] text-emerald-800">
+                <li>গ্রাহক অর্ডার প্লেস করার সাথে সাথে ব্যাকএন্ড স্বয়ংক্রিয়ভাবে <strong>{emailSettings.adminEmail}</strong> ইনবক্সে ইমেইল পাঠিয়ে দেবে।</li>
+                <li>গ্রাহক যদি চেকআউট পেজে নিজের ইমেইল দিয়ে থাকেন, তবে তিনিও একটি কনফার্মেশন রসিদ কপি পাবেন।</li>
+                <li>এছাড়াও আপনি অ্যাডমিন ড্যাশবোর্ডের <strong>"Gmail Orders"</strong> ট্যাব থেকে ১-ক্লিকেই যেকোনো পেন্ডিং অর্ডার জিমেইল ইনবক্সে সিঙ্ক করে নিতে পারবেন।</li>
+              </ul>
             </div>
           </div>
         </div>
