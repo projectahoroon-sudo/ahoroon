@@ -45,11 +45,21 @@ service cloud.firestore {
                data.get('step', 1) is number;
       }
 
+      function isValidStockDecrement() {
+        return incoming().diff(existing()).affectedKeys().hasOnly(['stock']) &&
+               incoming().stock is number &&
+               existing().get('stock', 0) is number &&
+               incoming().stock >= 0 &&
+               incoming().stock < existing().stock;
+      }
+
       allow read: if true;
       allow create: if isAdmin() && isValidProduct(incoming());
-      allow update: if isAdmin() && 
-                    isValidProduct(incoming()) && 
-                    incoming().get('createdAt', existing().get('createdAt', request.time)) == existing().get('createdAt', request.time);
+      allow update: if isValidProduct(incoming()) && (
+        (isAdmin() && 
+         incoming().get('createdAt', existing().get('createdAt', request.time)) == existing().get('createdAt', request.time)) ||
+        isValidStockDecrement()
+      );
       allow delete: if isAdmin();
     }
 

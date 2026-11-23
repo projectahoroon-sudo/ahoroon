@@ -41,7 +41,6 @@ export default function AdminSettings() {
     smtpHost: 'smtp.gmail.com',
     smtpPort: 465,
   });
-  const [emailSavedSuccess, setEmailSavedSuccess] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; msg: string } | null>(null);
 
@@ -97,10 +96,7 @@ export default function AdminSettings() {
 
   const loadEmailSettings = async () => {
     try {
-      const [status, es] = await Promise.all([
-        adminService.getEmailStatus().catch(() => null),
-        adminService.getEmailSettings().catch(() => null),
-      ]);
+      const status = await adminService.getEmailStatus().catch(() => null);
       if (status) {
         setEmailServerStatus({
           configured: Boolean(status.configured),
@@ -108,27 +104,12 @@ export default function AdminSettings() {
           smtpHost: status.smtpHost || 'smtp.gmail.com',
           smtpPort: status.smtpPort || 465,
         });
-      }
-      if (es && es.adminEmail) {
-        setEmailSettings({ adminEmail: es.adminEmail });
-      } else if (status && status.adminEmail) {
-        setEmailSettings({ adminEmail: status.adminEmail });
+        if (status.adminEmail) {
+          setEmailSettings({ adminEmail: status.adminEmail });
+        }
       }
     } catch (err) {
-      console.error('Error loading email settings:', err);
-    }
-  };
-
-  const handleSaveEmailSettings = async () => {
-    setSaving(true);
-    try {
-      await adminService.saveEmailSettings({ adminEmail: emailSettings.adminEmail });
-      setEmailSavedSuccess(true);
-      setTimeout(() => setEmailSavedSuccess(false), 3500);
-    } catch (e: any) {
-      alert('Failed saving email settings: ' + (e.message || e));
-    } finally {
-      setSaving(false);
+      console.error('Error loading email status:', err);
     }
   };
 
@@ -527,19 +508,10 @@ export default function AdminSettings() {
                   type="button"
                   onClick={handleTestEmail}
                   disabled={testingEmail || !emailServerStatus.configured}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-2xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-4 py-2.5 bg-[#005900] hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
                 >
                   <Send size={14} />
                   <span>{testingEmail ? 'পাঠানো হচ্ছে...' : 'টেস্ট ইমেইল পাঠান'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveEmailSettings}
-                  disabled={saving}
-                  className="px-5 py-2.5 bg-[#005900] hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <Save size={14} />
-                  <span>{emailSavedSuccess ? 'সংরক্ষিত হয়েছে!' : 'সেটিংস সেভ করুন'}</span>
                 </button>
               </div>
             </div>
@@ -565,7 +537,7 @@ export default function AdminSettings() {
                   placeholder="projectahoroon@gmail.com"
                   className="w-full bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs font-medium focus:ring-2 focus:ring-emerald-500/20"
                 />
-                <p className="text-[10px] text-gray-400">এই ইমেইলের ইনবক্সে গ্রাহকদের নতুন অর্ডারের সমস্ত তথ্য যাবে।</p>
+                <p className="text-[10px] text-gray-400">স্বয়ংক্রিয় অর্ডার ইমেইল ও টেস্ট ইমেইল এই ঠিকানায় পাঠানো হয়।</p>
               </div>
 
               <div className="space-y-1.5">

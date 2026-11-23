@@ -131,10 +131,12 @@ export default function Checkout() {
             const productDoc = await getDoc(productRef);
             if (productDoc.exists()) {
               const productData = productDoc.data();
-              if (productData && typeof productData.stock === 'number') {
+              if (productData && typeof productData.stock === 'number' && productData.stock > 0) {
                 const currentStock = productData.stock;
                 const newStock = Math.max(0, currentStock - item.cartQuantity);
-                await updateDoc(productRef, { stock: newStock });
+                if (newStock < currentStock) {
+                  await updateDoc(productRef, { stock: newStock });
+                }
               }
             }
           } catch (stockErr) {

@@ -617,27 +617,12 @@ Return ONLY a JSON array of the 4 recommended product IDs.`;
       `;
 
       // Read SMTP/recipient from server environment
-      let adminOrderEmail = process.env.ADMIN_ORDER_EMAIL || "projectahoroon@gmail.com";
+      const adminOrderEmail = process.env.ADMIN_ORDER_EMAIL || "projectahoroon@gmail.com";
       const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
       const smtpPort = Number(process.env.SMTP_PORT) || 465;
       const smtpUser = process.env.SMTP_USER || "";
       const smtpPass = (process.env.SMTP_PASS || "").replace(/\s+/g, "");
       const smtpSecure = process.env.SMTP_SECURE ? process.env.SMTP_SECURE === 'true' : smtpPort === 465;
-
-      // Allow non-secret admin recipient override from Firestore settings/email if valid
-      if (db) {
-        try {
-          const emailSettingsSnap = await getDoc(doc(db, 'settings', 'email'));
-          if (emailSettingsSnap.exists()) {
-            const es = emailSettingsSnap.data();
-            if (es.adminEmail && typeof es.adminEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(es.adminEmail.trim())) {
-              adminOrderEmail = es.adminEmail.trim();
-            }
-          }
-        } catch (esErr) {
-          console.warn("[SETTINGS_EMAIL] Failed to fetch email settings from Firestore:", esErr);
-        }
-      }
 
       const subject = `🛒 New Order Received - Order #${orderId}`;
 
@@ -781,21 +766,8 @@ Return ONLY a JSON array of the 4 recommended product IDs.`;
   });
 
   // Safe Server Email Configuration Status Endpoint (never exposes secrets)
-  app.get("/api/orders/email-status", async (_req, res) => {
-    let adminEmail = process.env.ADMIN_ORDER_EMAIL || "projectahoroon@gmail.com";
-    if (db) {
-      try {
-        const snap = await getDoc(doc(db, 'settings', 'email'));
-        if (snap.exists()) {
-          const es = snap.data();
-          if (es.adminEmail && typeof es.adminEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(es.adminEmail.trim())) {
-            adminEmail = es.adminEmail.trim();
-          }
-        }
-      } catch (err) {
-        console.warn("[EMAIL_STATUS_WARN] Could not read settings/email:", err);
-      }
-    }
+  app.get("/api/orders/email-status", (_req, res) => {
+    const adminEmail = process.env.ADMIN_ORDER_EMAIL || "projectahoroon@gmail.com";
     const smtpUser = process.env.SMTP_USER || "";
     const smtpPass = process.env.SMTP_PASS || "";
     const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
